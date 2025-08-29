@@ -1,0 +1,32 @@
+{
+    "HP Boost": {
+        "common": {"boost": 10, "stat": "HP"},
+        "rare": {"boost": 15, "stat": "HP"},
+        "epic": {"boost": 20, "stat": "HP"},
+        "legendary": {"boost": 30, "stat": "HP"}
+    },
+    "ATK Boost": {
+        "common": {"boost": 5, "stat": "ATK"},
+        "rare": {"boost": 10, "stat": "ATK"},
+        "epic": {"boost": 15, "stat": "ATK"},
+        "legendary": {"boost": 25, "stat": "ATK"}
+    },
+    "DEF Boost": {
+        "common": {"boost": 5, "stat": "DEF"},
+        "rare": {"boost": 10, "stat": "DEF"},
+        "epic": {"boost": 15, "stat": "DEF"},
+        "legendary": {"boost": 25, "stat": "DEF"}
+    },
+    "SPD Boost": {
+        "common": {"boost": 5, "stat": "SPD"},
+        "rare": {"boost": 10, "stat": "SPD"},
+        "epic": {"boost": 15, "stat": "SPD"},
+        "legendary": {"boost": 25, "stat": "SPD"}
+    },
+    "EVA Boost": {
+        "common": {"boost": 5, "stat": "EVA"},
+        "rare": {"boost": 10, "stat": "EVA"},
+        "epic": {"boost": 15, "stat": "EVA"},
+        "legendary": {"boost": 25, "stat": "EVA"}
+    }
+}

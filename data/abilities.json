@@ -1,0 +1,185 @@
+{
+  "Immune to stun effects": {
+    "effect": "immunity",
+    "status": "stun",
+    "description": "This character cannot be stunned or paralyzed."
+  },
+  "Critical slash deals double damage": {
+    "effect": "crit_damage_multiplier",
+    "multiplier": 2.0,
+    "description": "Critical hits will deal twice the normal damage."
+  },
+  "Heals small HP when attacking": {
+    "effect": "lifesteal",
+    "percentage": 10,
+    "description": "Heals for 10% of the damage dealt with each attack."
+  },
+  "Chance to dodge and counterattack": {
+    "effect": "dodge_counter",
+    "chance": 20,
+    "description": "Has a 20% chance to dodge an attack and immediately counter."
+  },
+  "Can transform to boost stats temporarily": {
+    "effect": "stat_boost_self",
+    "stats": ["ATK", "DEF"],
+    "percentage": 20,
+    "duration": 3,
+    "description": "Temporarily boosts ATK and DEF by 20% for 3 turns."
+  },
+  "Reduces damage taken for allies": {
+    "effect": "team_aura_def",
+    "percentage": 10,
+    "description": "Passively reduces all damage taken by allies by 10%."
+  },
+  "Can revive once after defeat": {
+    "effect": "revive",
+    "hp_percentage": 50,
+    "uses": 1,
+    "description": "Upon being defeated, revives once with 50% HP."
+  },
+  "Water techniques deal extra damage": {
+    "effect": "elemental_damage",
+    "element": "water",
+    "bonus_percentage": 25,
+    "description": "Water-based attacks deal an additional 25% damage."
+  },
+  "Boosts ATK when HP is low": {
+    "effect": "stat_boost_low_hp",
+    "stat": "ATK",
+    "threshold": 30,
+    "percentage": 50,
+    "description": "Increases ATK by 50% when HP is below 30%."
+  },
+  "High chance to land critical attacks": {
+    "effect": "crit_chance_boost",
+    "percentage": 25,
+    "description": "Has a permanent 25% increased chance to land a critical hit."
+  },
+  "Restores HP to allies occasionally": {
+    "effect": "team_heal_chance",
+    "chance": 15,
+    "percentage": 10,
+    "description": "Has a 15% chance to heal all allies for 10% of their max HP each turn."
+  },
+  "Copies enemy abilities once per battle": {
+    "effect": "copy_ability",
+    "uses": 1,
+    "description": "Can copy and use an opponent's ability once per battle."
+  },
+  "Can disable an enemy for one turn": {
+    "effect": "stun",
+    "duration": 1,
+    "chance": 30,
+    "description": "Has a 30% chance to disable an enemy for one turn."
+  },
+  "Deals massive damage with Susanoo": {
+    "effect": "special_attack",
+    "name": "Susanoo",
+    "damage_multiplier": 3.0,
+    "cooldown": 5,
+    "description": "Unleashes a devastating attack with a 5-turn cooldown."
+  },
+  "Sand shield blocks incoming attacks": {
+    "effect": "auto_shield",
+    "chance": 40,
+    "damage_reduction": 100,
+    "description": "Has a 40% chance to completely block an incoming attack."
+  },
+  "Can boost SPD greatly for short time": {
+    "effect": "stat_boost_self",
+    "stats": ["SPD"],
+    "percentage": 50,
+    "duration": 2,
+    "description": "Greatly increases SPD for 2 turns."
+  },
+  "Can block enemy chakra-based attacks": {
+    "effect": "block_ability_type",
+    "type": "magic",
+    "chance": 50,
+    "description": "Has a 50% chance to nullify any magic-based attacks."
+  },
+  "ATK doubles when transformed": {
+    "effect": "transform_stat",
+    "stat": "ATK",
+    "multiplier": 2.0,
+    "description": "Can transform to double Attack power."
+  },
+  "Boosts ATK after each received hit": {
+    "effect": "rampage",
+    "stat": "ATK",
+    "percentage_increase": 5,
+    "max_stacks": 10,
+    "description": "ATK increases by 5% each time this character is hit, stacking up to 10 times."
+  },
+  "Boosts power when allies are defeated": {
+    "effect": "avenger",
+    "stat": "ATK",
+    "percentage_increase": 25,
+    "description": "Increases ATK by 25% for each fallen ally."
+  },
+  "Regenerates HP slowly": {
+    "effect": "regen_hp",
+    "percentage": 5,
+    "description": "Regenerates 5% of max HP at the end of each turn."
+  },
+  "Boosts ATK after transforming": {
+    "effect": "transform_stat",
+    "stat": "ATK",
+    "multiplier": 1.5,
+    "description": "Can transform to increase Attack power by 50%."
+  },
+  "Deals extra damage to weakened enemies": {
+    "effect": "execute",
+    "threshold": 25,
+    "bonus_percentage": 50,
+    "description": "Deals 50% more damage to enemies below 25% HP."
+  },
+  "Heals HP after defeating an enemy": {
+    "effect": "heal_on_kill",
+    "percentage": 25,
+    "description": "Restores 25% of max HP after defeating an opponent."
+  },
+  "Absorbs enemy attacks to heal": {
+    "effect": "absorb_damage",
+    "chance": 20,
+    "heal_percentage": 50,
+    "description": "Has a 20% chance to absorb an attack and heal for 50% of the damage taken."
+  },
+  "ATK rises with each incoming attack": {
+    "effect": "rampage",
+    "stat": "ATK",
+    "percentage_increase": 8,
+    "max_stacks": 5,
+    "description": "ATK increases by 8% each time this character is hit, stacking up to 5 times."
+  },
+  "Chance to instantly obliterate an enemy": {
+    "effect": "instant_kill",
+    "chance": 5,
+    "description": "Has a 5% chance to instantly defeat any enemy."
+  },
+  "Reduces enemy SPD temporarily": {
+    "effect": "debuff_enemy",
+    "stat": "SPD",
+    "percentage": 20,
+    "duration": 3,
+    "description": "Reduces the target's Speed by 20% for 3 turns."
+  },
+  "Increases ATK after taking damage": {
+    "effect": "rampage",
+    "stat": "ATK",
+    "percentage_increase": 10,
+    "max_stacks": 5,
+    "description": "ATK increases by 10% each time this character takes damage."
+  },
+  "Can manipulate enemy perception": {
+    "effect": "confuse",
+    "chance": 25,
+    "duration": 2,
+    "description": "Has a 25% chance to confuse the enemy, making them attack their allies for 2 turns."
+  },
+  "Instant KO chance": {
+    "effect": "instant_kill",
+    "chance": 10,
+    "description": "A small, but terrifying, 10% chance to instantly defeat the opponent."
+  }
+}

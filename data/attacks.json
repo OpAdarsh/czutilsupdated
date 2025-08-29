@@ -1,0 +1,667 @@
+{
+  "common": [
+    {
+      "name": "Swift Strike",
+      "power": 40,
+      "accuracy": 100,
+      "description": "A quick and accurate jab that is hard to dodge."
+    },
+    {
+      "name": "Heavy Blow",
+      "power": 40,
+      "accuracy": 90,
+      "description": "A powerful swing that can stagger an opponent."
+    },
+    {
+      "name": "Counter",
+      "power": 40,
+      "accuracy": 95,
+      "description": "A defensive stance followed by a quick counter-attack."
+    },
+    {
+      "name": "Quick Attack",
+      "power": 40,
+      "accuracy": 95,
+      "description": "A burst of speed leading to a rapid strike."
+    }
+  ],
+  "characters": {
+    "1": [
+      { "name": "Oni Giri", "power": 50, "accuracy": 95, "unlock_level": 10, "description": "A three-way simultaneous sword slash." },
+      { "name": "Tatsu Maki", "power": 65, "accuracy": 90, "unlock_level": 25, "description": "A whirlwind slash that launches enemies into the air." },
+      { "name": "Shishi Sonson", "power": 75, "accuracy": 85, "unlock_level": 50, "description": "A powerful, single-strike sword-draw." },
+      { "name": "Ichidai Sanzen Daisen Sekai", "power": 90, "accuracy": 80, "unlock_level": 75, "description": "An ultimate three-sword style technique." }
+    ],
+    "2": [
+      { "name": "Diable Jambe", "power": 55, "accuracy": 95, "unlock_level": 10, "description": "Ignites his leg, adding fire damage to his kicks." },
+      { "name": "Concassé", "power": 65, "accuracy": 90, "unlock_level": 25, "description": "A powerful spinning kick aimed at the opponent's neck." },
+      { "name": "Hell Memories", "power": 80, "accuracy": 85, "unlock_level": 50, "description": "A flaming kick that sets the opponent ablaze." },
+      { "name": "Ifrit Jambe", "power": 90, "accuracy": 80, "unlock_level": 75, "description": "A stronger, blue-flamed version of Diable Jambe." }
+    ],
+    "3": [
+      { "name": "Gunpowder Star", "power": 45, "accuracy": 100, "unlock_level": 10, "description": "Fires a small, explosive pellet from his slingshot." },
+      { "name": "Impact Wolf", "power": 60, "accuracy": 90, "unlock_level": 25, "description": "A Pop Green that grows into a giant, shocking wolf." },
+      { "name": "Skull Bombgrass", "power": 70, "accuracy": 85, "unlock_level": 50, "description": "An explosive plant that creates a massive blast." },
+      { "name": "Fire Bird Star", "power": 85, "accuracy": 80, "unlock_level": 75, "description": "Launches a massive, phoenix-shaped fire projectile." }
+    ],
+    "4": [
+        { "name": "Guard Point", "power": 45, "accuracy": 100, "unlock_level": 10, "description": "Transforms his fur into a defensive shield." },
+        { "name": "Arm Point", "power": 60, "accuracy": 90, "unlock_level": 25, "description": "Transforms into a muscular form for a powerful punch." },
+        { "name": "Monster Point", "power": 75, "accuracy": 85, "unlock_level": 50, "description": "A giant, monstrous form that goes berserk." },
+        { "name": "Kung Fu Point", "power": 85, "accuracy": 80, "unlock_level": 75, "description": "A nimble form that uses kung fu." }
+    ],
+    "5": [
+        { "name": "Strong Right", "power": 50, "accuracy": 95, "unlock_level": 10, "description": "A straightforward but powerful punch." },
+        { "name": "Weapons Left", "power": 65, "accuracy": 90, "unlock_level": 25, "description": "Fires a cannon from his left hand." },
+        { "name": "Coup de Vent", "power": 80, "accuracy": 85, "unlock_level": 50, "description": "A powerful blast of compressed air." },
+        { "name": "Radical Beam", "power": 90, "accuracy": 80, "unlock_level": 75, "description": "A devastating laser beam fired from his hands." }
+    ],
+    "6": [
+        { "name": "Aubade Coup Droit", "power": 50, "accuracy": 95, "unlock_level": 10, "description": "A swift and precise sword thrust." },
+        { "name": "Nemuriuta Flanc", "power": 60, "accuracy": 90, "unlock_level": 25, "description": "Plays a tune that lulls opponents to sleep." },
+        { "name": "Kasuriuta: Fubuki Giri", "power": 75, "accuracy": 85, "unlock_level": 50, "description": "A flying slash that freezes the target." },
+        { "name": "Soul Solid", "power": 85, "accuracy": 80, "unlock_level": 75, "description": "Channels the cold of the underworld through his sword." }
+    ],
+    "7": [
+        { "name": "Karakusagawara Seiken", "power": 55, "accuracy": 95, "unlock_level": 10, "description": "A powerful punch that sends a shockwave through water." },
+        { "name": "Fish-Man Jujutsu: Water Heart", "power": 65, "accuracy": 90, "unlock_level": 25, "description": "Manipulates water to create a protective barrier." },
+        { "name": "Buraikan", "power": 80, "accuracy": 85, "unlock_level": 50, "description": "Launches a powerful water shockwave." },
+        { "name": "Gyojin Karate Ogi: Samehada Shotei", "power": 90, "accuracy": 80, "unlock_level": 75, "description": "An ultimate karate punch that vaporizes water." }
+    ],
+    "8": [
+        { "name": "Rasengan", "power": 60, "accuracy": 95, "unlock_level": 10, "description": "A spinning ball of chakra that grinds into its target." },
+        { "name": "Shadow Clone Jutsu", "power": 50, "accuracy": 90, "unlock_level": 25, "description": "Creates clones to overwhelm the opponent." },
+        { "name": "Sage Mode", "power": 75, "accuracy": 85, "unlock_level": 50, "description": "Enhances physical abilities, strength, and durability." },
+        { "name": "Tailed Beast Bomb", "power": 90, "accuracy": 80, "unlock_level": 75, "description": "A massive sphere of concentrated chakra." }
+    ],
+    "9": [
+        { "name": "Chidori", "power": 65, "accuracy": 95, "unlock_level": 10, "description": "A high concentration of lightning chakra channeled to the hand." },
+        { "name": "Amaterasu", "power": 75, "accuracy": 90, "unlock_level": 25, "description": "Ignites the target with inextinguishable black flames." },
+        { "name": "Susanoo", "power": 85, "accuracy": 85, "unlock_level": 50, "description": "A gigantic, humanoid avatar that fights on Sasuke's behalf." },
+        { "name": "Indra's Arrow", "power": 90, "accuracy": 80, "unlock_level": 75, "description": "The most powerful lightning-style jutsu." }
+    ],
+    "10": [
+        { "name": "Cherry Blossom Clash", "power": 50, "accuracy": 95, "unlock_level": 10, "description": "A powerful punch imbued with chakra." },
+        { "name": "Mystical Palm Technique", "power": 0, "accuracy": 100, "unlock_level": 25, "description": "Heals an ally for a moderate amount." },
+        { "name": "Creation Rebirth", "power": 70, "accuracy": 85, "unlock_level": 50, "description": "Heals herself completely but lowers her DEF." },
+        { "name": "Strength of a Hundred Seal", "power": 85, "accuracy": 80, "unlock_level": 75, "description": "Unleashes stored chakra for immense power." }
+    ],
+    "11": [
+        { "name": "Lightning Blade", "power": 60, "accuracy": 95, "unlock_level": 10, "description": "A refined version of the Chidori." },
+        { "name": "Kamui", "power": 70, "accuracy": 85, "unlock_level": 25, "description": "Warps a target or himself to another dimension." },
+        { "name": "Raikiri", "power": 80, "accuracy": 80, "unlock_level": 50, "description": "A powerful, focused lightning attack." },
+        { "name": "Kamui Shuriken", "power": 90, "accuracy": 75, "unlock_level": 75, "description": "Warps away anything the shuriken hits." }
+    ],
+    "12": [
+        { "name": "Tsukuyomi", "power": 65, "accuracy": 90, "unlock_level": 10, "description": "Traps an opponent in a powerful illusion." },
+        { "name": "Amaterasu", "power": 75, "accuracy": 85, "unlock_level": 25, "description": "Summons inextinguishable black flames." },
+        { "name": "Susanoo", "power": 85, "accuracy": 80, "unlock_level": 50, "description": "A powerful spectral avatar for offense and defense." },
+        { "name": "Totsuka Blade", "power": 90, "accuracy": 75, "unlock_level": 75, "description": "A spiritual weapon that seals anyone it pierces." }
+    ],
+    "13": [
+        { "name": "Fire Style: Majestic Destroyer Flame", "power": 70, "accuracy": 90, "unlock_level": 10, "description": "A massive wave of intense fire." },
+        { "name": "Wood Style: Deep Forest Emergence", "power": 75, "accuracy": 85, "unlock_level": 25, "description": "Creates a dense forest to crush opponents." },
+        { "name": "Perfect Susanoo", "power": 85, "accuracy": 80, "unlock_level": 50, "description": "The complete and overwhelming form of Susanoo." },
+        { "name": "Tengai Shinsei", "power": 90, "accuracy": 75, "unlock_level": 75, "description": "Summons two massive meteorites from the sky." }
+    ],
+    "14": [
+        { "name": "Sand Coffin", "power": 55, "accuracy": 95, "unlock_level": 10, "description": "Encases an opponent in sand." },
+        { "name": "Sand Tsunami", "power": 65, "accuracy": 90, "unlock_level": 25, "description": "Unleashes a massive wave of sand." },
+        { "name": "Shield of Shukaku", "power": 0, "accuracy": 100, "unlock_level": 50, "description": "Creates an incredibly durable sand shield." },
+        { "name": "Grand Sand Mausoleum Seal", "power": 90, "accuracy": 80, "unlock_level": 75, "description": "Traps and crushes opponents under a pyramid of sand." }
+    ],
+    "15": [
+        { "name": "Leaf Hurricane", "power": 50, "accuracy": 95, "unlock_level": 10, "description": "A powerful spinning kick." },
+        { "name": "Primary Lotus", "power": 65, "accuracy": 90, "unlock_level": 25, "description": "A high-speed taijutsu that damages both Lee and his opponent." },
+        { "name": "Eight Gates", "power": 80, "accuracy": 85, "unlock_level": 50, "description": "Opens inner gates to temporarily gain immense power." },
+        { "name": "Drunken Fist", "power": 85, "accuracy": 80, "unlock_level": 75, "description": "An unpredictable and powerful fighting style." }
+    ],
+    "16": [
+        { "name": "Gentle Fist", "power": 50, "accuracy": 95, "unlock_level": 10, "description": "Targets the opponent's chakra network." },
+        { "name": "Eight Trigrams Sixty-Four Palms", "power": 70, "accuracy": 90, "unlock_level": 25, "description": "A flurry of strikes that shuts down chakra points." },
+        { "name": "Rotation", "power": 0, "accuracy": 100, "unlock_level": 50, "description": "Creates a rotating dome of chakra to block attacks." },
+        { "name": "Vacuum Palm", "power": 85, "accuracy": 80, "unlock_level": 75, "description": "A powerful blast of chakra from the palm." }
+    ],
+    "18": [
+        { "name": "Galick Gun", "power": 60, "accuracy": 95, "unlock_level": 10, "description": "A powerful beam of purple energy." },
+        { "name": "Big Bang Attack", "power": 70, "accuracy": 90, "unlock_level": 25, "description": "A large sphere of ki that explodes on impact." },
+        { "name": "Super Saiyan Blue", "power": 80, "accuracy": 85, "unlock_level": 50, "description": "A transformation that grants godly ki." },
+        { "name": "Final Flash", "power": 90, "accuracy": 80, "unlock_level": 75, "description": "His most powerful energy wave." }
+    ],
+    "19": [
+        { "name": "Masenko", "power": 55, "accuracy": 95, "unlock_level": 10, "description": "A fast and powerful energy beam." },
+        { "name": "Super Saiyan 2", "power": 70, "accuracy": 90, "unlock_level": 25, "description": "A transformation unlocked through rage." },
+        { "name": "Father-Son Kamehameha", "power": 85, "accuracy": 85, "unlock_level": 50, "description": "A legendary Kamehameha performed with his father's spirit." },
+        { "name": "Mystic Form", "power": 90, "accuracy": 80, "unlock_level": 75, "description": "Unlocks his full potential beyond Super Saiyan." }
+    ],
+    "20": [
+        { "name": "Special Beam Cannon", "power": 65, "accuracy": 85, "unlock_level": 10, "description": "A focused, drilling beam of energy." },
+        { "name": "Light Grenade", "power": 70, "accuracy": 90, "unlock_level": 25, "description": "A powerful sphere of explosive energy." },
+        { "name": "Regeneration", "power": 0, "accuracy": 100, "unlock_level": 50, "description": "Heals a significant amount of his own HP." },
+        { "name": "Hellzone Grenade", "power": 85, "accuracy": 80, "unlock_level": 75, "description": "Surrounds the opponent with ki blasts that converge." }
+    ],
+    "21": [
+        { "name": "Burning Attack", "power": 60, "accuracy": 95, "unlock_level": 10, "description": "A series of hand gestures that launches a firey blast." },
+        { "name": "Shining Sword Attack", "power": 70, "accuracy": 90, "unlock_level": 25, "description": "A high-speed sword combo." },
+        { "name": "Super Saiyan Rage", "power": 80, "accuracy": 85, "unlock_level": 50, "description": "A unique transformation that channels immense power." },
+        { "name": "Final Hope Slash", "power": 90, "accuracy": 80, "unlock_level": 75, "description": "Gathers energy from everyone to create a massive spirit sword." }
+    ],
+    "22": [
+        { "name": "Death Beam", "power": 65, "accuracy": 100, "unlock_level": 10, "description": "A fast, piercing beam of energy." },
+        { "name": "Death Ball", "power": 80, "accuracy": 85, "unlock_level": 25, "description": "A massive sphere of destructive energy." },
+        { "name": "Golden Frieza", "power": 85, "accuracy": 80, "unlock_level": 50, "description": "A powerful transformation that rivals the gods." },
+        { "name": "Nova Strike", "power": 90, "accuracy": 75, "unlock_level": 75, "description": "Engulfs himself in energy and charges the opponent." }
+    ],
+    "23": [
+        { "name": "Perfect Barrier", "power": 0, "accuracy": 100, "unlock_level": 10, "description": "Creates a powerful barrier to block attacks." },
+        { "name": "Special Beam Cannon", "power": 70, "accuracy": 90, "unlock_level": 25, "description": "Uses Piccolo's signature move." },
+        { "name": "Kamehameha", "power": 75, "accuracy": 90, "unlock_level": 50, "description": "Uses Goku's signature move." },
+        { "name": "Solar Kamehameha", "power": 90, "accuracy": 80, "unlock_level": 75, "description": "An ultimate Kamehameha powered by the sun." }
+    ],
+    "24": [
+        { "name": "Candy Beam", "power": 60, "accuracy": 90, "unlock_level": 10, "description": "Turns the opponent into a non-threatening object." },
+        { "name": "Super Vanishing Ball", "power": 75, "accuracy": 85, "unlock_level": 25, "description": "A massive, pink energy sphere." },
+        { "name": "Human Extinction Attack", "power": 85, "accuracy": 80, "unlock_level": 50, "description": "Fires countless energy beams to destroy everything." },
+        { "name": "Absorption", "power": 90, "accuracy": 75, "unlock_level": 75, "description": "Absorbs an opponent to gain their power." }
+    ],
+    "25": [
+        { "name": "Power Impact", "power": 70, "accuracy": 90, "unlock_level": 10, "description": "A massive punch that creates a huge shockwave." },
+        { "name": "Justice Flash", "power": 80, "accuracy": 85, "unlock_level": 25, "description": "A rapid-fire barrage of energy blasts." },
+        { "name": "Magnetron", "power": 85, "accuracy": 80, "unlock_level": 50, "description": "A powerful, focused beam of energy." },
+        { "name": "Full Power", "power": 90, "accuracy": 75, "unlock_level": 75, "description": "Unleashes his full, overwhelming power." }
+    ],
+    "26": [
+        { "name": "Sphere of Destruction", "power": 75, "accuracy": 85, "unlock_level": 10, "description": "Creates a sun-like energy sphere." },
+        { "name": "God of Destruction's Wrath", "power": 85, "accuracy": 80, "unlock_level": 25, "description": "A rapid-fire energy blast." },
+        { "name": "Hakai", "power": 90, "accuracy": 70, "unlock_level": 50, "description": "Erases the opponent from existence." },
+        { "name": "Ultra Instinct -Sign-", "power": 90, "accuracy": 80, "unlock_level": 75, "description": "A state of divine reaction and speed." }
+    ],
+    "28": [
+        { "name": "Sode no Shirayuki", "power": 55, "accuracy": 95, "unlock_level": 10, "description": "A series of ice-based dance attacks." },
+        { "name": "Some no mai, Tsukishiro", "power": 65, "accuracy": 90, "unlock_level": 25, "description": "Creates a large circle of ice to freeze enemies." },
+        { "name": "Bankai: Hakka no Togame", "power": 85, "accuracy": 80, "unlock_level": 50, "description": "Freezes a target to absolute zero." },
+        { "name": "Absolute Zero", "power": 90, "accuracy": 75, "unlock_level": 75, "description": "A devastatingly cold attack." }
+    ],
+    "29": [
+        { "name": "Zabimaru", "power": 55, "accuracy": 95, "unlock_level": 10, "description": "Whips his extendable blade at the opponent." },
+        { "name": "Higa Zekkō", "power": 70, "accuracy": 85, "unlock_level": 25, "description": "Fires all segments of his blade at once." },
+        { "name": "Bankai: Sōō Zabimaru", "power": 80, "accuracy": 80, "unlock_level": 50, "description": "A massive skeletal snake that crushes opponents." },
+        { "name": "Orochi Reppa", "power": 90, "accuracy": 75, "unlock_level": 75, "description": "An ultimate attack with his fully manifested Bankai." }
+    ],
+    "30": [
+        { "name": "Senbonzakura", "power": 60, "accuracy": 95, "unlock_level": 10, "description": "Scatters his blade into a thousand tiny petals." },
+        { "name": "Senkei", "power": 75, "accuracy": 85, "unlock_level": 25, "description": "Focuses all his petals into a dome of swords." },
+        { "name": "Bankai: Senbonzakura Kageyoshi", "power": 85, "accuracy": 80, "unlock_level": 50, "description": "A storm of countless blade petals." },
+        { "name": "Shūkei: Hakuteiken", "power": 90, "accuracy": 75, "unlock_level": 75, "description": "The final form of his Bankai, a single, devastating sword." }
+    ],
+    "31": [
+        { "name": "Kyōka Suigetsu", "power": 65, "accuracy": 90, "unlock_level": 10, "description": "Perfect hypnosis that controls the five senses." },
+        { "name": "Hadō #90. Kurohitsugi", "power": 80, "accuracy": 85, "unlock_level": 25, "description": "A high-level kido that traps and crushes with gravity." },
+        { "name": "Hōgyoku Fusion", "power": 85, "accuracy": 80, "unlock_level": 50, "description": "Fuses with the Hōgyoku to attain immense power." },
+        { "name": "Ultrafragor", "power": 90, "accuracy": 75, "unlock_level": 75, "description": "A powerful energy blast from his final form." }
+    ],
+    "32": [
+        { "name": "Benihime", "power": 60, "accuracy": 95, "unlock_level": 10, "description": "A crimson shield or cutting blast from his cane sword." },
+        { "name": "Kannonbiraki Benihime Aratame", "power": 80, "accuracy": 85, "unlock_level": 25, "description": "His Bankai, which restructures anything it touches." },
+        { "name": "Gigai", "power": 0, "accuracy": 100, "unlock_level": 50, "description": "Uses a fake body to trick and trap an opponent." },
+        { "name": "Hadō #91. Senjū Kōten Taihō", "power": 85, "accuracy": 80, "unlock_level": 75, "description": "A massive, destructive kido spell." }
+    ],
+    "33": [
+        { "name": "Shunkō", "power": 65, "accuracy": 95, "unlock_level": 10, "description": "Combines hand-to-hand combat with kido." },
+        { "name": "Flash Step", "power": 0, "accuracy": 100, "unlock_level": 25, "description": "Moves so fast she appears to teleport, evading an attack." },
+        { "name": "Raijin Senkei", "power": 80, "accuracy": 85, "unlock_level": 50, "description": "An electrified form of Shunkō with immense power." },
+        { "name": "Thunder Beast", "power": 90, "accuracy": 80, "unlock_level": 75, "description": "Her ultimate attack, creating a beast of lightning." }
+    ],
+    "34": [
+        { "name": "Reiatsu Release", "power": 60, "accuracy": 90, "unlock_level": 10, "description": "Releases immense spiritual pressure to stun opponents." },
+        { "name": "Nozarashi", "power": 75, "accuracy": 85, "unlock_level": 25, "description": "The released form of his Zanpakutō, a massive axe." },
+        { "name": "Ryodan", "power": 85, "accuracy": 80, "unlock_level": 50, "description": "A two-handed sword strike with immense power." },
+        { "name": "Bankai", "power": 90, "accuracy": 75, "unlock_level": 75, "description": "Transforms into a demonic berserker with unbelievable strength." }
+    ],
+    "35": [
+        { "name": "Gran Rey Cero", "power": 70, "accuracy": 90, "unlock_level": 10, "description": "A powerful Cero mixed with his own blood." },
+        { "name": "Pantera", "power": 80, "accuracy": 85, "unlock_level": 25, "description": "His Resurrección, transforming him into a panther-like beast." },
+        { "name": "Desgarrón", "power": 85, "accuracy": 80, "unlock_level": 50, "description": "Creates claws of spiritual energy to slash opponents." },
+        { "name": "Garra de la Pantera", "power": 90, "accuracy": 75, "unlock_level": 75, "description": "The ultimate claw-based attack." }
+    ],
+    "36": [
+        { "name": "Cero Oscuras", "power": 75, "accuracy": 85, "unlock_level": 10, "description": "A powerful black Cero." },
+        { "name": "Murciélago, Segunda Etapa", "power": 85, "accuracy": 80, "unlock_level": 25, "description": "A second, hidden Resurrección form." },
+        { "name": "Lanza del Relámpago", "power": 90, "accuracy": 75, "unlock_level": 50, "description": "Creates a powerful, explosive lance of energy." },
+        { "name": "Pesquisa", "power": 0, "accuracy": 100, "unlock_level": 75, "description": "Analyzes the opponent to find a weakness, increasing his next attack's damage." }
+    ],
+    "38": [
+        { "name": "Telekinetic Barrage", "power": 65, "accuracy": 90, "unlock_level": 10, "description": "Hurls a volley of debris at the enemy." },
+        { "name": "Psychic Bind", "power": 0, "accuracy": 95, "unlock_level": 25, "description": "Immobilizes an enemy with telekinesis for a turn." },
+        { "name": "Giant Meteor", "power": 85, "accuracy": 80, "unlock_level": 50, "description": "Pulls a meteor from space to crash down on enemies." },
+        { "name": "Twister", "power": 90, "accuracy": 75, "unlock_level": 75, "description": "Creates a massive psychic tornado." }
+    ],
+    "39": [
+        { "name": "Water Stream Rock Smashing Fist", "power": 60, "accuracy": 95, "unlock_level": 10, "description": "A flurry of precise, defensive strikes." },
+        { "name": "Abandonment", "power": 75, "accuracy": 85, "unlock_level": 25, "description": "Increases his ATK and SPD for several turns." },
+        { "name": "Whirlwind Iron Cutting Fist", "power": 85, "accuracy": 80, "unlock_level": 50, "description": "A powerful offensive martial art." },
+        { "name": "Cross Fang Dragon Slayer Fist", "power": 90, "accuracy": 75, "unlock_level": 75, "description": "A combined attack with his brother, Bomb." }
+    ],
+    "40": [
+        { "name": "Whirlwind Iron Cutting Fist", "power": 65, "accuracy": 90, "unlock_level": 10, "description": "Copies Bang's signature martial art." },
+        { "name": "Monster Calamity God Slayer Fist", "power": 80, "accuracy": 85, "unlock_level": 25, "description": "A perfected, monstrous martial art." },
+        { "name": "Awakened Garou", "power": 85, "accuracy": 80, "unlock_level": 50, "description": "Transforms, gaining immense power and speed." },
+        { "name": "Great Fa Jin", "power": 90, "accuracy": 75, "unlock_level": 75, "description": "Unleashes a devastating shockwave through the ground." }
+    ],
+    "42": [
+        { "name": "AP Shot", "power": 60, "accuracy": 95, "unlock_level": 10, "description": "A focused, armor-piercing explosion." },
+        { "name": "Stun Grenade", "power": 50, "accuracy": 100, "unlock_level": 25, "description": "A non-lethal flash that can stun opponents." },
+        { "name": "Howitzer Impact", "power": 85, "accuracy": 80, "unlock_level": 50, "description": "A massive, spiraling explosion." },
+        { "name": "Cluster", "power": 90, "accuracy": 75, "unlock_level": 75, "description": "An upgraded version of AP Shot that fragments." }
+    ],
+    "43": [
+        { "name": "Heaven-Piercing Ice Wall", "power": 60, "accuracy": 95, "unlock_level": 10, "description": "Creates a massive wall of ice." },
+        { "name": "Flashfreeze Heatwave", "power": 75, "accuracy": 85, "unlock_level": 25, "description": "A combination of ice and fire for a powerful blast." },
+        { "name": "Flashfire Fist - Jet Burn", "power": 85, "accuracy": 80, "unlock_level": 50, "description": "A focused jet of intense flames." },
+        { "name": "Phosphor", "power": 90, "accuracy": 75, "unlock_level": 75, "description": "The ultimate combination of his fire and ice powers." }
+    ],
+    "44": [
+        { "name": "Texas Smash", "power": 70, "accuracy": 90, "unlock_level": 10, "description": "A powerful punch that creates immense wind pressure." },
+        { "name": "Detroit Smash", "power": 80, "accuracy": 85, "unlock_level": 25, "description": "A devastating downward punch." },
+        { "name": "United States of Smash", "power": 90, "accuracy": 75, "unlock_level": 50, "description": "His ultimate move, a punch with all his power." },
+        { "name": "Plus Ultra!", "power": 0, "accuracy": 100, "unlock_level": 75, "description": "Inspires the team, boosting all allies' ATK." }
+    ],
+    "45": [
+        { "name": "Decay", "power": 65, "accuracy": 90, "unlock_level": 10, "description": "Causes anything he touches to crumble to dust." },
+        { "name": "Awakening", "power": 75, "accuracy": 85, "unlock_level": 25, "description": "Spreads his decay without direct contact." },
+        { "name": "All For One", "power": 85, "accuracy": 80, "unlock_level": 50, "description": "Uses a combination of stolen Quirks." },
+        { "name": "Total Destruction", "power": 90, "accuracy": 75, "unlock_level": 75, "description": "A massive wave of decay that disintegrates a large area." }
+    ],
+    "46": [
+        { "name": "Cremation", "power": 65, "accuracy": 90, "unlock_level": 10, "description": "Unleashes a torrent of blue flames." },
+        { "name": "Flashfire Fist - Jet Burn", "power": 80, "accuracy": 85, "unlock_level": 25, "description": "A focused beam of intense blue fire." },
+        { "name": "Prominence Burn", "power": 85, "accuracy": 80, "unlock_level": 50, "description": "A massive, incinerating blast." },
+        { "name": "Hell Spider", "power": 90, "accuracy": 75, "unlock_level": 75, "description": "Sends out sharp tendrils of blue flame." }
+    ],
+    "47": [
+        { "name": "Flashfire Fist - Hell Spider", "power": 70, "accuracy": 90, "unlock_level": 10, "description": "Shoots thin streams of fire from his fingertips." },
+        { "name": "Prominence Burn", "power": 85, "accuracy": 80, "unlock_level": 25, "description": "A massive, all-consuming fire blast." },
+        { "name": "Hell's Curtain", "power": 80, "accuracy": 85, "unlock_level": 50, "description": "Creates a wall of fire to trap opponents." },
+        { "name": "Jet Burn", "power": 90, "accuracy": 75, "unlock_level": 75, "description": "A super-heated, focused fire beam." }
+    ],
+    "48": [
+        { "name": "Stone Spikes", "power": 55, "accuracy": 95, "unlock_level": 10, "description": "Creates sharp spikes from the ground." },
+        { "name": "Automail Blade", "power": 65, "accuracy": 90, "unlock_level": 25, "description": "Transmutes his automail arm into a sharp blade." },
+        { "name": "Cannon", "power": 75, "accuracy": 85, "unlock_level": 50, "description": "Transmutes a functional cannon and fires it." },
+        { "name": "Human Transmutation", "power": 90, "accuracy": 70, "unlock_level": 75, "description": "A forbidden alchemy that deconstructs the opponent." }
+    ],
+    "49": [
+        { "name": "Stone Wall", "power": 0, "accuracy": 100, "unlock_level": 10, "description": "Creates a massive wall to defend his team." },
+        { "name": "Earthen Fist", "power": 60, "accuracy": 90, "unlock_level": 25, "description": "Coats his fists in stone for a powerful punch." },
+        { "name": "Philosopher's Stone", "power": 80, "accuracy": 85, "unlock_level": 50, "description": "Temporarily uses a philosopher's stone for powerful alchemy." },
+        { "name": "Binding Alchemy", "power": 70, "accuracy": 90, "unlock_level": 75, "description": "Traps and restrains the opponent with transmuted chains." }
+    ],
+    "50": [
+        { "name": "Flame Alchemy", "power": 65, "accuracy": 95, "unlock_level": 10, "description": "Creates precise, explosive fire with a snap." },
+        { "name": "Firestorm", "power": 75, "accuracy": 85, "unlock_level": 25, "description": "Creates a massive, swirling vortex of fire." },
+        { "name": "Dragon's Breath", "power": 85, "accuracy": 80, "unlock_level": 50, "description": "A focused, high-temperature flame attack." },
+        { "name": "Ignition", "power": 90, "accuracy": 75, "unlock_level": 75, "description": "Boils the water within an opponent's body." }
+    ],
+    "51": [
+        { "name": "Destruction Alchemy", "power": 70, "accuracy": 90, "unlock_level": 10, "description": "Deconstructs anything he touches." },
+        { "name": "Arm of Annihilation", "power": 80, "accuracy": 85, "unlock_level": 25, "description": "A powerful strike that destroys on contact." },
+        { "name": "Reconstruction", "power": 0, "accuracy": 100, "unlock_level": 50, "description": "Uses creation alchemy to heal or create barriers." },
+        { "name": "Wrath", "power": 90, "accuracy": 75, "unlock_level": 75, "description": "A final, desperate attack that destroys a wide area." }
+    ],
+    "52": [
+        { "name": "Earth Alchemy", "power": 60, "accuracy": 95, "unlock_level": 10, "description": "Manipulates the earth for defense and offense." },
+        { "name": "Philosopher's Stone Barrier", "power": 0, "accuracy": 100, "unlock_level": 25, "description": "An impenetrable shield." },
+        { "name": "Soul Manipulation", "power": 80, "accuracy": 85, "unlock_level": 50, "description": "Communicates with the souls within him for power." },
+        { "name": "The Gate", "power": 90, "accuracy": 75, "unlock_level": 75, "description": "Uses the power of the Gate for perfect alchemy." }
+    ],
+    "54": [
+        { "name": "Blade Dance", "power": 60, "accuracy": 95, "unlock_level": 10, "description": "A swift and deadly flurry of slashes." },
+        { "name": "Ackerman Instinct", "power": 75, "accuracy": 85, "unlock_level": 25, "description": "Awakens her lineage for a massive stat boost." },
+        { "name": "Thunder Spear", "power": 85, "accuracy": 80, "unlock_level": 50, "description": "Launches an explosive, armor-piercing spear." },
+        { "name": "Deathblow", "power": 90, "accuracy": 75, "unlock_level": 75, "description": "A single, perfectly aimed strike to a vital point." }
+    ],
+    "55": [
+        { "name": "Strategic Retreat", "power": 0, "accuracy": 100, "unlock_level": 10, "description": "Boosts the team's RES for one turn." },
+        { "name": "Flare Gun", "power": 50, "accuracy": 95, "unlock_level": 25, "description": "Fires a signal flare to distract and disorient." },
+        { "name": "Colossal Titan Transformation", "power": 85, "accuracy": 75, "unlock_level": 50, "description": "Transforms into the Colossal Titan for a massive explosion." },
+        { "name": "Master Plan", "power": 0, "accuracy": 100, "unlock_level": 75, "description": "Greatly boosts the ATK and SPD of all allies." }
+    ],
+    "56": [
+        { "name": "Blade Spin", "power": 65, "accuracy": 95, "unlock_level": 10, "description": "A spinning attack that hits multiple enemies." },
+        { "name": "Titan Slash", "power": 75, "accuracy": 90, "unlock_level": 25, "description": "A precise strike aimed at a Titan's weak point." },
+        { "name": "Awakened Power", "power": 85, "accuracy": 80, "unlock_level": 50, "description": "Unlocks his full potential for a few turns." },
+        { "name": "God of Speed", "power": 90, "accuracy": 80, "unlock_level": 75, "description": "A blitz of attacks so fast they are nearly invisible." }
+    ],
+    "57": [
+        { "name": "Charge!", "power": 0, "accuracy": 100, "unlock_level": 10, "description": "Inspires his team, boosting their ATK." },
+        { "name": "Sacrificial Gambit", "power": 70, "accuracy": 85, "unlock_level": 25, "description": "A risky move that deals high damage but lowers his own DEF." },
+        { "name": "Long-Distance Scouting Formation", "power": 0, "accuracy": 100, "unlock_level": 50, "description": "Increases team's RES and allows them to see enemy weaknesses." },
+        { "name": "Final Charge", "power": 90, "accuracy": 75, "unlock_level": 75, "description": "Leads a final, desperate charge that deals massive damage." }
+    ],
+    "58": [
+        { "name": "Armor Bash", "power": 60, "accuracy": 90, "unlock_level": 10, "description": "A powerful charge in his armored form." },
+        { "name": "Titan Hardening", "power": 0, "accuracy": 100, "unlock_level": 25, "description": "Hardens his armor, greatly increasing DEF." },
+        { "name": "Charge", "power": 75, "accuracy": 85, "unlock_level": 50, "description": "A devastating tackle." },
+        { "name": "Unstoppable Force", "power": 85, "accuracy": 80, "unlock_level": 75, "description": "A reckless, all-out assault." }
+    ],
+    "59": [
+        { "name": "Beast Titan Throw", "power": 65, "accuracy": 90, "unlock_level": 10, "description": "Hurls massive objects with incredible accuracy." },
+        { "name": "Scream", "power": 0, "accuracy": 100, "unlock_level": 25, "description": "Commands nearby Pure Titans to attack his target." },
+        { "name": "Crushing Grip", "power": 80, "accuracy": 85, "unlock_level": 50, "description": "Grabs and crushes an opponent with immense strength." },
+        { "name": "Perfect Game", "power": 90, "accuracy": 75, "unlock_level": 75, "description": "A devastating barrage of thrown projectiles." }
+    ],
+    "61": [
+        { "name": "Blood Demon Art: Pyrokinesis", "power": 60, "accuracy": 90, "unlock_level": 10, "description": "Ignites her own blood to create powerful flames." },
+        { "name": "Berserk Form", "power": 75, "accuracy": 85, "unlock_level": 25, "description": "A transformation that greatly boosts her stats but loses control." },
+        { "name": "Rapid Regeneration", "power": 0, "accuracy": 100, "unlock_level": 50, "description": "Heals a massive amount of HP." },
+        { "name": "Exploding Blood", "power": 85, "accuracy": 80, "unlock_level": 75, "description": "Causes her blood to explode, dealing massive damage." }
+    ],
+    "62": [
+        { "name": "Thunder Breathing: First Form", "power": 65, "accuracy": 95, "unlock_level": 10, "description": "A single, lightning-fast sword draw." },
+        { "name": "Sixfold", "power": 75, "accuracy": 90, "unlock_level": 25, "description": "Six consecutive lightning-fast dashes and slashes." },
+        { "name": "Godspeed", "power": 85, "accuracy": 85, "unlock_level": 50, "description": "Pushes his speed to its absolute limit." },
+        { "name": "Seventh Form: Honoikazuchi no Kami", "power": 90, "accuracy": 80, "unlock_level": 75, "description": "Creates a dragon of lightning to strike the enemy." }
+    ],
+    "63": [
+        { "name": "Beast Breathing: Seventh Fang", "power": 60, "accuracy": 90, "unlock_level": 10, "description": "A disorienting, multi-directional attack." },
+        { "name": "Spatial Awareness", "power": 0, "accuracy": 100, "unlock_level": 25, "description": "Detects all enemies in an area, increasing RES." },
+        { "name": "Devouring Rush", "power": 80, "accuracy": 85, "unlock_level": 50, "description": "A wild and relentless flurry of slashes." },
+        { "name": "Sudden Throwing Strike", "power": 85, "accuracy": 80, "unlock_level": 75, "description": "Throws both of his swords with incredible force." }
+    ],
+    "64": [
+        { "name": "Flame Breathing: First Form", "power": 65, "accuracy": 95, "unlock_level": 10, "description": "A powerful, flaming dash and slash." },
+        { "name": "Sea of Fire", "power": 75, "accuracy": 90, "unlock_level": 25, "description": "A wide, sweeping fire attack." },
+        { "name": "Ninth Form: Rengoku", "power": 90, "accuracy": 80, "unlock_level": 50, "description": "A devastating, dragon-shaped flame attack." },
+        { "name": "Esoteric Art", "power": 90, "accuracy": 75, "unlock_level": 75, "description": "The ultimate technique of the Flame Hashira." }
+    ],
+    "65": [
+        { "name": "Water Breathing: Fourth Form", "power": 60, "accuracy": 95, "unlock_level": 10, "description": "Multiple consecutive slashes like a harsh tide." },
+        { "name": "Eleventh Form: Lull", "power": 0, "accuracy": 100, "unlock_level": 25, "description": "A state of complete tranquility that negates attacks." },
+        { "name": "Tenth Form: Constant Flux", "power": 85, "accuracy": 85, "unlock_level": 50, "description": "A continuous, flowing attack that grows in power." },
+        { "name": "Dead Calm", "power": 90, "accuracy": 80, "unlock_level": 75, "description": "The ultimate defensive technique, negating any attack." }
+    ],
+    "66": [
+        { "name": "Demon Blood Art", "power": 70, "accuracy": 90, "unlock_level": 10, "description": "A swift and deadly attack using his own flesh and blood." },
+        { "name": "Infinite Regeneration", "power": 0, "accuracy": 100, "unlock_level": 25, "description": "Rapidly heals from any injury." },
+        { "name": "Biokinesis", "power": 85, "accuracy": 80, "unlock_level": 50, "description": "Manipulates his own body to create devastating attacks." },
+        { "name": "Curse", "power": 90, "accuracy": 75, "unlock_level": 75, "description": "Inflicts a deadly curse on anyone who speaks his name." }
+    ],
+    "68": [
+        { "name": "Jajanken: Rock", "power": 65, "accuracy": 90, "unlock_level": 10, "description": "A powerful, straightforward punch." },
+        { "name": "Jajanken: Scissors", "power": 60, "accuracy": 95, "unlock_level": 25, "description": "Transmutes his aura into a sharp blade." },
+        { "name": "Jajanken: Paper", "power": 55, "accuracy": 100, "unlock_level": 50, "description": "Fires a blast of aura from his palm." },
+        { "name": "Vow", "power": 90, "accuracy": 75, "unlock_level": 75, "description": "Makes a vow to gain immense power at a great cost." }
+    ],
+    "69": [
+        { "name": "Chain Jail", "power": 60, "accuracy": 95, "unlock_level": 10, "description": "Traps a member of the Phantom Troupe, rendering them powerless." },
+        { "name": "Emperor Time", "power": 75, "accuracy": 85, "unlock_level": 25, "description": "Becomes a Specialist, mastering all Nen types at 100%." },
+        { "name": "Judgment Chain", "power": 85, "accuracy": 80, "unlock_level": 50, "description": "A chain that pierces the heart and sets a deadly condition." },
+        { "name": "Dowsing Chain", "power": 0, "accuracy": 100, "unlock_level": 75, "description": "Detects lies and finds hidden objects or people." }
+    ],
+    "70": [
+        { "name": "Medical Assistance", "power": 0, "accuracy": 100, "unlock_level": 10, "description": "Heals a small amount of HP for an ally." },
+        { "name": "Briefcase Bash", "power": 45, "accuracy": 95, "unlock_level": 25, "description": "Whacks the opponent with his sturdy briefcase." },
+        { "name": "Remote Punch", "power": 60, "accuracy": 90, "unlock_level": 50, "description": "Creates a portal to punch an enemy from a distance." },
+        { "name": "Doctor's Orders", "power": 0, "accuracy": 100, "unlock_level": 75, "description": "Greatly boosts the RES of all allies for one turn." }
+    ],
+    "71": [
+        { "name": "Bungee Gum", "power": 60, "accuracy": 95, "unlock_level": 10, "description": "An elastic aura that can be used for offense and defense." },
+        { "name": "Texture Surprise", "power": 0, "accuracy": 100, "unlock_level": 25, "description": "Applies a texture to a surface to deceive the opponent." },
+        { "name": "Card Throw", "power": 75, "accuracy": 90, "unlock_level": 50, "description": "Throws razor-sharp playing cards." },
+        { "name": "Psychotic Urge", "power": 85, "accuracy": 80, "unlock_level": 75, "description": "Unleashes his bloodlust, increasing his ATK and SPD." }
+    ],
+    "72": [
+        { "name": "Skill Hunter", "power": 70, "accuracy": 90, "unlock_level": 10, "description": "Steals an opponent's ability for the duration of the battle." },
+        { "name": "Indoor Fish", "power": 60, "accuracy": 95, "unlock_level": 25, "description": "Summons Nen fish that eat flesh in a sealed room." },
+        { "name": "Fun Fun Cloth", "power": 0, "accuracy": 100, "unlock_level": 50, "description": "Shrinks objects and people to a tiny size." },
+        { "name": "Ben's Knife", "power": 85, "accuracy": 80, "unlock_level": 75, "description": "A poisoned knife that guarantees a slow death." }
+    ],
+    "74": [
+        { "name": "Snatch", "power": 60, "accuracy": 90, "unlock_level": 10, "description": "Steals an opponent's physical strength." },
+        { "name": "Fox Hunt", "power": 70, "accuracy": 85, "unlock_level": 25, "description": "A swift, unavoidable attack." },
+        { "name": "Immortality", "power": 0, "accuracy": 100, "unlock_level": 50, "description": "Completely regenerates his HP." },
+        { "name": "Zero Sign", "power": 85, "accuracy": 80, "unlock_level": 75, "description": "Becomes completely undetectable for a surprise attack." }
+    ],
+    "75": [
+        { "name": "Gideon", "power": 65, "accuracy": 90, "unlock_level": 10, "description": "A powerful swing with her giant war hammer." },
+        { "name": "Creation", "power": 0, "accuracy": 100, "unlock_level": 25, "description": "Manipulates the earth to create defenses or attacks." },
+        { "name": "Heavy Metal", "power": 80, "accuracy": 85, "unlock_level": 50, "description": "Turns her body into unbreakable metal, boosting DEF." },
+        { "name": "Mother Catastrophe", "power": 90, "accuracy": 75, "unlock_level": 75, "description": "Drops a massive chunk of earth on her opponents." }
+    ],
+    "76": [
+        { "name": "Chastiefol: Form One", "power": 60, "accuracy": 95, "unlock_level": 10, "description": "His spirit spear attacks rapidly." },
+        { "name": "Form Five: Increase", "power": 0, "accuracy": 100, "unlock_level": 25, "description": "Multiplies his spear into a swarm of kunai." },
+        { "name": "True Spirit Spear Chastiefol", "power": 85, "accuracy": 80, "unlock_level": 50, "description": "Unleashes the full power of his spear." },
+        { "name": "Disaster", "power": 90, "accuracy": 75, "unlock_level": 75, "description": "Controls life and death, escalating wounds or tumors." }
+    ],
+    "77": [
+        { "name": "Absolute Cancel", "power": 0, "accuracy": 100, "unlock_level": 10, "description": "Dispels any magical effect." },
+        { "name": "Perfect Cube", "power": 0, "accuracy": 100, "unlock_level": 25, "description": "Traps an opponent in an unbreakable cube." },
+        { "name": "Infinity", "power": 85, "accuracy": 80, "unlock_level": 50, "description": "Makes her spells last forever." },
+        { "name": "Chronocoaster", "power": 90, "accuracy": 75, "unlock_level": 75, "description": "Freezes time for her opponents." }
+    ],
+    "78": [
+        { "name": "Rhitta", "power": 70, "accuracy": 90, "unlock_level": 10, "description": "A powerful swing with his divine axe." },
+        { "name": "Sunshine", "power": 80, "accuracy": 85, "unlock_level": 25, "description": "His power grows as the sun rises." },
+        { "name": "Cruel Sun", "power": 85, "accuracy": 80, "unlock_level": 50, "description": "Creates a miniature sun to incinerate his enemies." },
+        { "name": "The One", "power": 90, "accuracy": 75, "unlock_level": 75, "description": "The peak of his power, making him invincible for one minute." }
+    ],
+    "80": [
+        { "name": "Spirit of Zephyr", "power": 60, "accuracy": 95, "unlock_level": 10, "description": "Creates powerful wind blades." },
+        { "name": "Sylph's Breath", "power": 75, "accuracy": 85, "unlock_level": 25, "description": "A massive tornado that tears through enemies." },
+        { "name": "Spirit Dive", "power": 85, "accuracy": 80, "unlock_level": 50, "description": "Fuses with the wind spirit for a massive power boost." },
+        { "name": "Spirit Storm", "power": 90, "accuracy": 75, "unlock_level": 75, "description": "A devastating storm of wind magic." }
+    ],
+    "81": [
+        { "name": "Sea Dragon's Roar", "power": 60, "accuracy": 95, "unlock_level": 10, "description": "A powerful jet of water." },
+        { "name": "Valkyrie Dress", "power": 0, "accuracy": 100, "unlock_level": 25, "description": "Creates an armor of water, boosting DEF and ATK." },
+        { "name": "Sea Dragon's Nest", "power": 75, "accuracy": 85, "unlock_level": 50, "description": "Traps enemies in a vortex of water." },
+        { "name": "Saint Valkyrie Dress", "power": 90, "accuracy": 80, "unlock_level": 75, "description": "The ultimate form of her water armor." }
+    ],
+    "82": [
+        { "name": "Dark Cloaked Dimension Slash", "power": 70, "accuracy": 90, "unlock_level": 10, "description": "A sword slash that cuts through dimensions." },
+        { "name": "Black Hole", "power": 80, "accuracy": 85, "unlock_level": 25, "description": "Sucks in and destroys enemy magic." },
+        { "name": "Death Thrust", "power": 85, "accuracy": 80, "unlock_level": 50, "description": "A powerful, focused dark magic attack." },
+        { "name": "Equinox", "power": 90, "accuracy": 75, "unlock_level": 75, "description": "A devastating slash that ignores durability." }
+    ],
+    "83": [
+        { "name": "Thunder God's Boots", "power": 60, "accuracy": 95, "unlock_level": 10, "description": "Coats his feet in lightning for faster kicks." },
+        { "name": "True Lightning Magic: Raijin", "power": 75, "accuracy": 85, "unlock_level": 25, "description": "A powerful, far-reaching lightning attack." },
+        { "name": "Thunder God's Gauntlet", "power": 80, "accuracy": 80, "unlock_level": 50, "description": "Creates gauntlets of lightning for powerful punches." },
+        { "name": "Thunderclap", "power": 85, "accuracy": 75, "unlock_level": 75, "description": "A devastatingly fast lightning attack." }
+    ],
+    "84": [
+        { "name": "Exploding Fireball", "power": 50, "accuracy": 95, "unlock_level": 10, "description": "A straightforward but effective fire spell." },
+        { "name": "Crazy Cyclone", "power": 65, "accuracy": 85, "unlock_level": 25, "description": "A wild, unpredictable flurry of fireballs." },
+        { "name": "Soul Chain Deathmatch", "power": 75, "accuracy": 80, "unlock_level": 50, "description": "Traps an enemy, forcing a one-on-one fight." },
+        { "name": "Vanishing Death Ball", "power": 85, "accuracy": 75, "unlock_level": 75, "description": "A powerful, homing fireball." }
+    ],
+    "85": [
+        { "name": "Improvised Dish", "power": 45, "accuracy": 100, "unlock_level": 10, "description": "A creative attack that catches the opponent off guard." },
+        { "name": "Joichiro Special", "power": 60, "accuracy": 90, "unlock_level": 25, "description": "A secret technique that boosts his stats." },
+        { "name": "Foodgasm", "power": 0, "accuracy": 100, "unlock_level": 50, "description": "Stuns the opponent with an unbelievably delicious attack." },
+        { "name": "The Final Plate", "power": 85, "accuracy": 80, "unlock_level": 75, "description": "A masterpiece of an attack that deals massive damage." }
+    ],
+    "86": [
+        { "name": "God's Tongue", "power": 0, "accuracy": 100, "unlock_level": 10, "description": "Analyzes an opponent's weakness, lowering their DEF." },
+        { "name": "Royal Command", "power": 50, "accuracy": 95, "unlock_level": 25, "description": "Commands her allies, boosting their ATK." },
+        { "name": "Perfect Dish", "power": 70, "accuracy": 90, "unlock_level": 50, "description": "A flawless attack that is difficult to counter." },
+        { "name": "Queen's Decree", "power": 85, "accuracy": 80, "unlock_level": 75, "description": "A powerful, wide-ranging attack that demoralizes the enemy." }
+    ],
+    "87": [
+        { "name": "Sword Skill: Horizontal Square", "power": 65, "accuracy": 95, "unlock_level": 10, "description": "A four-hit combo." },
+        { "name": "Starburst Stream", "power": 80, "accuracy": 85, "unlock_level": 25, "description": "A sixteen-hit dual-wielding combo." },
+        { "name": "The Eclipse", "power": 85, "accuracy": 80, "unlock_level": 50, "description": "A twenty-seven-hit combo, his ultimate sword skill." },
+        { "name": "Incarnate Arms", "power": 90, "accuracy": 75, "unlock_level": 75, "description": "Uses his willpower to surpass the system's limits." }
+    ],
+    "88": [
+        { "name": "Linear", "power": 60, "accuracy": 95, "unlock_level": 10, "description": "A single, incredibly fast rapier thrust." },
+        { "name": "Star Splash", "power": 75, "accuracy": 85, "unlock_level": 25, "description": "An eight-hit rapier combo." },
+        { "name": "Mother's Rosario", "power": 90, "accuracy": 80, "unlock_level": 50, "description": "An eleven-hit original sword skill." },
+        { "name": "Flashing Penetrator", "power": 85, "accuracy": 80, "unlock_level": 75, "description": "A high-speed, powerful lunge." }
+    ],
+    "89": [
+        { "name": "Death Note", "power": 80, "accuracy": 70, "unlock_level": 10, "description": "Writes a name in his notebook. Has a chance to instantly defeat." },
+        { "name": "Shinigami Eyes", "power": 0, "accuracy": 100, "unlock_level": 25, "description": "Sees an opponent's name and lifespan, increasing accuracy." },
+        { "name": "Master Plan", "power": 0, "accuracy": 100, "unlock_level": 50, "description": "Spends a turn to set a trap, guaranteeing the next attack hits." },
+        { "name": "Keikaku Doori", "power": 90, "accuracy": 75, "unlock_level": 75, "description": "A perfectly executed plan that deals massive damage." }
+    ],
+    "90": [
+        { "name": "Deduction", "power": 0, "accuracy": 100, "unlock_level": 10, "description": "Lowers an opponent's RES by finding a flaw in their technique." },
+        { "name": "Capoeira", "power": 60, "accuracy": 95, "unlock_level": 25, "description": "An unpredictable and powerful fighting style." },
+        { "name": "Checkmate", "power": 85, "accuracy": 80, "unlock_level": 50, "description": "A perfectly executed plan that corners the opponent." },
+        { "name": "Last Stand", "power": 90, "accuracy": 75, "unlock_level": 75, "description": "Boosts his own ATK and DEF when his HP is low." }
+    ],
+    "91": [
+        { "name": "Angel Arm", "power": 80, "accuracy": 85, "unlock_level": 10, "description": "A powerful cannon hidden within his arm." },
+        { "name": "Ricochet Shot", "power": 65, "accuracy": 95, "unlock_level": 25, "description": "Bounces bullets off surfaces to hit unpredictable angles." },
+        { "name": "Final Shot", "power": 90, "accuracy": 75, "unlock_level": 50, "description": "A single, devastating shot." },
+        { "name": "Love and Peace!", "power": 0, "accuracy": 100, "unlock_level": 75, "description": "Confuses the opponent, causing them to miss their next turn." }
+    ],
+    "92": [
+        { "name": "Punisher", "power": 70, "accuracy": 90, "unlock_level": 10, "description": "Unleashes a barrage of bullets from his cross-shaped machine gun." },
+        { "name": "Mercy", "power": 0, "accuracy": 100, "unlock_level": 25, "description": "Heals an ally for a moderate amount." },
+        { "name": "Confession", "power": 85, "accuracy": 80, "unlock_level": 50, "description": "A final, desperate attack." },
+        { "name": "Last Rites", "power": 90, "accuracy": 75, "unlock_level": 75, "description": "An all-out assault with his full arsenal." }
+    ],
+    "93": [
+        { "name": "Cross Grave", "power": 60, "accuracy": 95, "unlock_level": 10, "description": "A powerful strike with his anti-akuma weapon." },
+        { "name": "Crown Clown", "power": 75, "accuracy": 85, "unlock_level": 25, "description": "A more powerful, versatile form of his Innocence." },
+        { "name": "Sword of Exorcism", "power": 85, "accuracy": 80, "unlock_level": 50, "description": "A devastating blade of light." },
+        { "name": "Divine Salvation", "power": 90, "accuracy": 75, "unlock_level": 75, "description": "The ultimate exorcising technique." }
+    ],
+    "94": [
+        { "name": "Dark Boots", "power": 60, "accuracy": 95, "unlock_level": 10, "description": "Powerful, high-speed kicks." },
+        { "name": "Crystal Type", "power": 0, "accuracy": 100, "unlock_level": 25, "description": "Transforms into a more powerful, crystallized form." },
+        { "name": "Fallen Angel", "power": 80, "accuracy": 85, "unlock_level": 50, "description": "A devastating aerial attack." },
+        { "name": "Iron Shackles", "power": 85, "accuracy": 80, "unlock_level": 75, "description": "Binds and crushes an opponent with immense force." }
+    ],
+    "95": [
+        { "name": "Gura Gura no Mi", "power": 75, "accuracy": 85, "unlock_level": 10, "description": "Creates powerful quakes to shatter the air." },
+        { "name": "Island Shaker", "power": 85, "accuracy": 80, "unlock_level": 25, "description": "A punch powerful enough to tilt an entire island." },
+        { "name": "Heaven and Earth", "power": 90, "accuracy": 75, "unlock_level": 50, "description": "Grabs the air itself and pulls it down, causing widespread destruction." },
+        { "name": "The World's Strongest Man", "power": 90, "accuracy": 75, "unlock_level": 75, "description": "An all-out assault with the full power of his Devil Fruit." }
+    ],
+    "96": [
+        { "name": "Conqueror's Haki", "power": 0, "accuracy": 100, "unlock_level": 10, "description": "Intimidates the opponent, lowering their ATK and DEF." },
+        { "name": "Gryphon", "power": 70, "accuracy": 90, "unlock_level": 25, "description": "A powerful slash with his saber." },
+        { "name": "Divine Departure", "power": 85, "accuracy": 80, "unlock_level": 50, "description": "A powerful, long-range slash imbued with Haki." },
+        { "name": "The Yonko's Presence", "power": 90, "accuracy": 75, "unlock_level": 75, "description": "Unleashes his full presence, stunning all enemies." }
+    ],
+    "97": [
+        { "name": "Thunder Bagua", "power": 75, "accuracy": 85, "unlock_level": 10, "description": "A devastating swing with his kanabo." },
+        { "name": "Dragon Form", "power": 80, "accuracy": 80, "unlock_level": 25, "description": "Transforms into a massive, mythical dragon." },
+        { "name": "Bolo Breath", "power": 85, "accuracy": 80, "unlock_level": 50, "description": "A massive blast of destructive energy from his dragon form." },
+        { "name": "Ragnarok", "power": 90, "accuracy": 75, "unlock_level": 75, "description": "An ultimate, lightning-infused strike." }
+    ],
+    "98": [
+        { "name": "Soul Pocus", "power": 70, "accuracy": 85, "unlock_level": 10, "description": "Extracts the soul of a fearful opponent." },
+        { "name": "Napoleon", "power": 75, "accuracy": 85, "unlock_level": 25, "description": "Attacks with her sentient homie hat-sword." },
+        { "name": "Indra", "power": 85, "accuracy": 80, "unlock_level": 50, "description": "A massive lightning bolt from her storm cloud, Zeus." },
+        { "name": "Mother's Misery", "power": 90, "accuracy": 75, "unlock_level": 75, "description": "A devastating, fiery slash from her sun homie, Prometheus." }
+    ],
+    "99": [
+        { "name": "Mochi Thrust", "power": 70, "accuracy": 90, "unlock_level": 10, "description": "A lightning-fast punch with his mochi abilities." },
+        { "name": "Future Sight", "power": 0, "accuracy": 100, "unlock_level": 25, "description": "Sees a few seconds into the future, guaranteeing his next attack hits." },
+        { "name": "Awakened Mochi", "power": 85, "accuracy": 80, "unlock_level": 50, "description": "Turns the environment into mochi to trap and attack." },
+        { "name": "Strength Mochi", "power": 90, "accuracy": 75, "unlock_level": 75, "description": "An incredibly powerful, Haki-infused mochi punch." }
+    ],
+    "100": [
+        { "name": "Dragon's Breath", "power": 70, "accuracy": 90, "unlock_level": 10, "description": "A powerful blast of wind." },
+        { "name": "Revolutionary Call", "power": 0, "accuracy": 100, "unlock_level": 25, "description": "Inspires his allies, boosting their SPD." },
+        { "name": "Stormbringer", "power": 85, "accuracy": 80, "unlock_level": 50, "description": "Summons a massive storm to strike the battlefield." },
+        { "name": "Dragon's Claw", "power": 90, "accuracy": 75, "unlock_level": 75, "description": "A mysterious, powerful attack." }
+    ],
+    "101": [
+        { "name": "Fire Fist", "power": 65, "accuracy": 95, "unlock_level": 10, "description": "A powerful punch made of fire." },
+        { "name": "Fire Gun", "power": 70, "accuracy": 90, "unlock_level": 25, "description": "Fires bullets of fire from his fingertips." },
+        { "name": "Flame Emperor", "power": 85, "accuracy": 80, "unlock_level": 50, "description": "Creates a massive sphere of fire." },
+        { "name": "Dai Enkai: Entei", "power": 90, "accuracy": 75, "unlock_level": 75, "description": "His ultimate fire attack." }
+    ],
+    "102": [
+        { "name": "Ice Age", "power": 70, "accuracy": 90, "unlock_level": 10, "description": "Freezes a vast area instantly." },
+        { "name": "Ice Saber", "power": 65, "accuracy": 95, "unlock_level": 25, "description": "Creates a sharp blade of ice." },
+        { "name": "Ice Time Capsule", "power": 0, "accuracy": 100, "unlock_level": 50, "description": "Freezes an opponent solid for a turn." },
+        { "name": "Partisan", "power": 85, "accuracy": 80, "unlock_level": 75, "description": "Launches several spears of ice at the opponent." }
+    ],
+    "103": [
+        { "name": "Yata no Kagami", "power": 0, "accuracy": 100, "unlock_level": 10, "description": "Moves at the speed of light to dodge or attack." },
+        { "name": "Yasakani no Magatama", "power": 80, "accuracy": 85, "unlock_level": 25, "description": "Fires a barrage of light particles." },
+        { "name": "Ama no Murakumo", "power": 85, "accuracy": 80, "unlock_level": 50, "description": "Creates a sword of pure light." },
+        { "name": "Light Speed Kick", "power": 90, "accuracy": 75, "unlock_level": 75, "description": "A devastating kick delivered at the speed of light." }
+    ],
+    "104": [
+        { "name": "Dai Funka", "power": 70, "accuracy": 90, "unlock_level": 10, "description": "Launches a giant fist of magma." },
+        { "name": "Ryusei Kazan", "power": 80, "accuracy": 85, "unlock_level": 25, "description": "Rains down magma fists like a meteor shower." },
+        { "name": "Inugami Guren", "power": 85, "accuracy": 80, "unlock_level": 50, "description": "Creates a wave of magma in the shape of a dog." },
+        { "name": "Meigo", "power": 90, "accuracy": 75, "unlock_level": 75, "description": "A powerful magma punch that can melt through anything." }
+    ],
+    "105": [
+        { "name": "Gum-Gum Pistol", "power": 60, "accuracy": 95, "unlock_level": 10, "description": "A straightforward, stretching punch." },
+        { "name": "Gear Second", "power": 0, "accuracy": 100, "unlock_level": 25, "description": "Pumps his blood faster to dramatically increase his speed." },
+        { "name": "Gear Fourth: Boundman", "power": 85, "accuracy": 80, "unlock_level": 50, "description": "A powerful transformation combining his rubbery body with Haki." },
+        { "name": "Gum-Gum King Kong Gun", "power": 90, "accuracy": 75, "unlock_level": 75, "description": "His most powerful punch in Gear Fourth." }
+    ],
+    "106": [
+        { "name": "Incinerate", "power": 65, "accuracy": 90, "unlock_level": 10, "description": "Fires a powerful beam from his cannon arms." },
+        { "name": "Machine Gun Blows", "power": 75, "accuracy": 85, "unlock_level": 25, "description": "A rapid-fire barrage of punches." },
+        { "name": "Spiral Incineration Cannon", "power": 85, "accuracy": 80, "unlock_level": 50, "description": "A more powerful, focused incineration beam." },
+        { "name": "Self-Destruct", "power": 90, "accuracy": 70, "unlock_level": 75, "description": "A last resort that deals massive damage to everyone." }
+    ],
+    "107": [
+        { "name": "Hell Storm", "power": 60, "accuracy": 90, "unlock_level": 10, "description": "Creates a psychic blizzard of small objects." },
+        { "name": "Psychic Whirlwind", "power": 70, "accuracy": 85, "unlock_level": 25, "description": "Traps an opponent in a telekinetic vortex." },
+        { "name": "Blizzard Group", "power": 0, "accuracy": 100, "unlock_level": 50, "description": "Boosts the ATK and DEF of her entire team." },
+        { "name": "Psychic Assault", "power": 85, "accuracy": 80, "unlock_level": 75, "description": "A full-power telekinetic attack." }
+    ],
+    "108": [
+        { "name": "Water Stream Rock Smashing Fist", "power": 65, "accuracy": 95, "unlock_level": 10, "description": "A flurry of precise, defensive strikes." },
+        { "name": "Abandonment", "power": 75, "accuracy": 85, "unlock_level": 25, "description": "Increases his ATK and SPD for several turns." },
+        { "name": "Whirlwind Iron Cutting Fist", "power": 85, "accuracy": 80, "unlock_level": 50, "description": "A powerful offensive martial art." },
+        { "name": "Cross Fang Dragon Slayer Fist", "power": 90, "accuracy": 75, "unlock_level": 75, "description": "A combined attack with his brother, Bomb." }
+    ],
+    "109": [
+        { "name": "Atomic Slash", "power": 70, "accuracy": 95, "unlock_level": 10, "description": "Slashes an opponent dozens of times in an instant." },
+        { "name": "Air Blade", "power": 60, "accuracy": 100, "unlock_level": 25, "description": "Sends a sharp slash of air at the opponent." },
+        { "name": "Focused Atomic Slash", "power": 85, "accuracy": 85, "unlock_level": 50, "description": "A more powerful, focused version of his signature move." },
+        { "name": "Atomic Beeline Slash", "power": 90, "accuracy": 80, "unlock_level": 75, "description": "A devastatingly fast charge and slash." }
+    ],
+    "110": [
+        { "name": "Trick Play", "power": 45, "accuracy": 100, "unlock_level": 10, "description": "Uses his backpack of tricks to confuse the enemy." },
+        { "name": "Underdogma", "power": 60, "accuracy": 90, "unlock_level": 25, "description": "A full-power attack from his giant robot." },
+        { "name": "Brave Giant", "power": 80, "accuracy": 85, "unlock_level": 50, "description": "Summons his giant mech for a powerful attack." },
+        { "name": "Okame-chan", "power": 0, "accuracy": 100, "unlock_level": 75, "description": "A device that scans the opponent and reveals their weaknesses." }
+    ],
+    "111": [
+        { "name": "Missile Barrage", "power": 70, "accuracy": 90, "unlock_level": 10, "description": "Launches a volley of homing missiles." },
+        { "name": "Jet Propulsion", "power": 0, "accuracy": 100, "unlock_level": 25, "description": "Boosts his SPD for several turns." },
+        { "name": "Full Salvo", "power": 85, "accuracy": 80, "unlock_level": 50, "description": "Unleashes his entire arsenal at once." },
+        { "name": "Battle Robot", "power": 90, "accuracy": 75, "unlock_level": 75, "description": "Deploys a powerful combat drone to fight alongside him." }
+    ],
+    "112": [
+        { "name": "Infinite Regeneration", "power": 0, "accuracy": 100, "unlock_level": 10, "description": "Heals a portion of his HP at the end of every turn." },
+        { "name": "Dual Pistols", "power": 60, "accuracy": 95, "unlock_level": 25, "description": "A rapid-fire attack with two pistols." },
+        { "name": "Axe", "power": 70, "accuracy": 90, "unlock_level": 50, "description": "A powerful swing with a fire axe." },
+        { "name": "Undying", "power": 85, "accuracy": 80, "unlock_level": 75, "description": "A reckless attack that deals damage based on his missing HP." }
+    ],
+    "113": [
+        { "name": "Doggy Paddle", "power": 65, "accuracy": 95, "unlock_level": 10, "description": "A surprisingly powerful flurry of paw strikes." },
+        { "name": "Fierce Howl", "power": 0, "accuracy": 100, "unlock_level": 25, "description": "Lowers the opponent's ATK and DEF." },
+        { "name": "Guard Dog", "power": 80, "accuracy": 85, "unlock_level": 50, "description": "A powerful defensive and offensive stance." },
+        { "name": "Unleashed", "power": 90, "accuracy": 80, "unlock_level": 75, "description": "Attacks with the full, primal fury of a beast." }
+    ],
+    "114": [
+        { "name": "Gold Form", "power": 70, "accuracy": 90, "unlock_level": 10, "description": "Transforms into a golden chariot for a powerful charge." },
+        { "name": "Tactical Transformation", "power": 0, "accuracy": 100, "unlock_level": 25, "description": "Changes form to best suit the situation, boosting a random stat." },
+        { "name": "Jet Form", "power": 80, "accuracy": 85, "unlock_level": 50, "description": "A high-speed aerial assault." },
+        { "name": "Bishop Form", "power": 90, "accuracy": 75, "unlock_level": 75, "description": "A powerful, long-range energy blast." }
+    ],
+    "115": [
+        { "name": "Fighting Spirit", "power": 65, "accuracy": 90, "unlock_level": 10, "description": "His ATK rises the more damage he takes." },
+        { "name": "Savage Tornado", "power": 75, "accuracy": 85, "unlock_level": 25, "description": "Spins his bat to create a destructive whirlwind." },
+        { "name": "Dragon Thrashing", "power": 85, "accuracy": 80, "unlock_level": 50, "description": "A devastating, full-power swing." },
+        { "name": "Indomitable", "power": 90, "accuracy": 75, "unlock_level": 75, "description": "Refuses to go down, surviving a fatal blow with 1 HP." }
+    ]
+  }
+}
+
