@@ -8,6 +8,7 @@ import time
 import datetime
 from collections import defaultdict
 import asyncio
+import math
 # Import the database functions
 import database as db
 
@@ -30,7 +31,7 @@ def has_accepted_rules():
         if player.get("rules_accepted", 0) == 1:
             return True
 
-        cog = ctx.bot.get_cog('CZ')
+        cog = ctx.bot.get_cog('Core Gameplay')
         if not cog or ctx.author.id in cog.rules_prompts.values():
             return False
 
@@ -63,15 +64,13 @@ def has_accepted_rules():
 
     return commands.check(predicate)
 
-class CZ(commands.Cog):
-    """A cog for the anime RPG game, now using a database."""
+class CZ(commands.Cog, name="Core Gameplay"):
+    """A cog for the anime RPG game's core mechanics."""
     def __init__(self, bot):
         self.bot = bot
         self.characters = load_json_data('characters.json')
-        self.items = load_json_data('items.json')
-        self.abilities = load_json_data('abilities.json')
         self.attacks = load_json_data('attacks.json')
-        self.active_battles = set()
+        self.active_battles = {}
         self.rules_prompts = {}
         db.init_db()
 
@@ -93,45 +92,29 @@ class CZ(commands.Cog):
     def _get_xp_for_next_level(self, level):
         return (level ** 2) * 100
 
-    def _get_unlocked_attacks(self, character, current_level):
-        """Returns a list of attacks unlocked up to the current level."""
-        char_id_str = str(character.get('id'))
-        all_char_moves = self.attacks.get('characters', {}).get(char_id_str, [])
-        unlocked_moves = [move for move in all_char_moves if move.get('unlock_level', 1) <= current_level]
-        return unlocked_moves
+    def _create_character_instance(self, base_character):
+        stats_cog = self.bot.get_cog('Stat Calculations')
+        if not stats_cog:
+            print("Error: Stat Calculations cog not found.")
+            return None
 
-    def _create_character_instance(self, base_character, iv):
-        stats_dict = {k: v for k, v in base_character.items() if k not in ["Ability", "Description", "name", "id"]}
-        if not stats_dict: return {}
+        stat_keys = ['HP', 'ATK', 'DEF', 'SPD', 'SP_ATK', 'SP_DEF']
+        base_stats = {k: v for k, v in base_character.items() if k in stat_keys}
         
-        # Generate individual IVs for each stat (0-31)
-        individual_ivs = {}
-        total_iv_points = 0
-        max_possible_iv_points = 31 * len(stats_dict)
+        individual_ivs = stats_cog._generate_ivs_with_distribution(list(base_stats.keys()))
         
-        for stat in stats_dict.keys():
-            # Generate a random IV between 0 and 31 for each stat
-            individual_ivs[stat] = random.randint(0, 31)
-            total_iv_points += individual_ivs[stat]
-        
-        # Calculate overall IV percentage
-        iv_percentage = round((total_iv_points / max_possible_iv_points) * 100, 2)
-        
-        # Calculate actual stats based on base stats and individual IVs
-        instance_stats = {}
-        for stat, base_value in stats_dict.items():
-            # Formula: final_stat = base_stat + (base_stat * (iv_value/31) * 0.3)
-            iv_boost = base_value * (individual_ivs[stat]/31) * 0.3
-            instance_stats[stat] = max(1, round(base_value + iv_boost))
+        total_iv_points = sum(individual_ivs.values())
+        max_possible_iv_points = 31 * len(base_stats)
+        iv_percentage = round((total_iv_points / max_possible_iv_points) * 100, 2) if max_possible_iv_points > 0 else 0
 
-        # Initial moveset for a new character (level 1)
+        instance_stats = stats_cog._calculate_stats(base_stats, individual_ivs, 1)
+
         common_moves = [move['name'] for move in self.attacks.get('physical', [])[:1]] + [move['name'] for move in self.attacks.get('special', [])[:1]]
         char_id_str = str(base_character.get('id'))
         first_special = next((move['name'] for move in self.attacks.get('characters', {}).get(char_id_str, []) if move.get('unlock_level', 1) <= 1), None)
         
         initial_moveset = common_moves
-        if first_special:
-            initial_moveset.append(first_special)
+        if first_special: initial_moveset.append(first_special)
         
         return {
             "id": base_character.get('id'), "name": base_character['name'], "iv": iv_percentage, "stats": instance_stats,
@@ -140,888 +123,286 @@ class CZ(commands.Cog):
             "individual_ivs": individual_ivs
         }
         
-    def _scale_character_to_level(self, base_char, level):
-        # Create character with high IVs (for NPCs/enemies)
-        instance = self._create_character_instance(base_char, 0)
-        
-        # Manually set high individual IVs (24-31 range for each stat)
-        for stat in instance['individual_ivs'].keys():
-            instance['individual_ivs'][stat] = random.randint(24, 31)
-        
-        # Recalculate overall IV percentage
-        total_iv_points = sum(instance['individual_ivs'].values())
-        max_possible_iv_points = 31 * len(instance['individual_ivs'])
-        instance['iv'] = round((total_iv_points / max_possible_iv_points) * 100, 2)
-        
-        # Recalculate stats based on new IVs
-        stats_dict = {k: v for k, v in base_char.items() if k not in ["Ability", "Description", "name", "id"]}
-        for stat, base_value in stats_dict.items():
-            iv_boost = base_value * (instance['individual_ivs'][stat]/31) * 0.3
-            instance['stats'][stat] = max(1, round(base_value + iv_boost))
-        
-        # Add level-up stat bonuses
-        stat_points_to_add = (level - 1) * 3
-        stat_keys = list(instance['stats'].keys())
-        for _ in range(stat_points_to_add):
-            instance['stats'][random.choice(stat_keys)] += 1
-        instance['level'] = level
-        return instance
-
     def get_character_attacks(self, character):
-        unlocked_attacks = []
         active_moves = character.get('moveset', [])
         all_possible_moves = self.attacks.get('physical', []) + self.attacks.get('special', []) + self.attacks.get('characters', {}).get(str(character.get('id')), [])
-        
-        for move_name in active_moves:
-            move_data = next((m for m in all_possible_moves if m['name'] == move_name), None)
-            if move_data:
-                unlocked_attacks.append(move_data)
-        return unlocked_attacks
+        return [m for m in all_possible_moves if m['name'] in active_moves]
 
-    class CharacterSelectView(discord.ui.View):
-        def __init__(self, author, available_characters):
-            super().__init__(timeout=60.0)
-            self.author = author
-            self.available_characters = [c for c in available_characters if c['current_hp'] > 0]
-            self.selected_character = None
-
-            for character in self.available_characters:
-                button = discord.ui.Button(
-                    label=f"{character['name']} (HP: {character['current_hp']}/{character['stats']['HP']})", 
-                    style=discord.ButtonStyle.success
-                )
-                async def button_callback(interaction: discord.Interaction, char=character):
-                    if interaction.user.id != self.author.id:
-                        await interaction.response.send_message("This isn't your battle!", ephemeral=True)
-                        return
-                    self.selected_character = char
-                    self.stop()
-                    await interaction.response.defer()
-                button.callback = button_callback
-                self.add_item(button)
-        
-        async def on_timeout(self):
-            if self.available_characters:
-                self.selected_character = self.available_characters[0]
-            self.stop()
-    
+    # --- Battle UI Components ---
     class BattleView(discord.ui.View):
         def __init__(self, author, available_attacks):
             super().__init__(timeout=60.0)
             self.author = author
             self.available_attacks = available_attacks
             self.chosen_attack = None
-
             for attack in self.available_attacks:
                 button = discord.ui.Button(label=attack['name'], style=discord.ButtonStyle.primary)
                 async def button_callback(interaction: discord.Interaction, atk=attack):
                     if interaction.user.id != self.author.id:
-                        await interaction.response.send_message("This isn't your turn!", ephemeral=True)
-                        return
+                        await interaction.response.send_message("This isn't your turn!", ephemeral=True); return
                     self.chosen_attack = atk
                     self.stop()
                     await interaction.response.defer()
                 button.callback = button_callback
                 self.add_item(button)
-        
         async def on_timeout(self):
-            if self.available_attacks:
-                self.chosen_attack = self.available_attacks[0]
+            if self.available_attacks: self.chosen_attack = self.available_attacks[0]
             self.stop()
             
     class CharacterSelectView(discord.ui.View):
         def __init__(self, author, team):
-            super().__init__(timeout=60.0)
+            super().__init__(timeout=120.0)
             self.author = author
-            self.team = team
+            self.team = [c for c in team if c['current_hp'] > 0]
             self.selected_character = None
-
             for character in self.team:
-                if character['current_hp'] <= 0:
-                    continue  # Skip defeated characters
-                button = discord.ui.Button(
-                    label=f"{character['name']} (HP: {character['current_hp']}/{character['stats']['HP']})", 
-                    style=discord.ButtonStyle.secondary
-                )
+                button = discord.ui.Button(label=f"{character['name']} (HP: {character['current_hp']}/{character['stats']['HP']})", style=discord.ButtonStyle.secondary)
                 async def button_callback(interaction: discord.Interaction, char=character):
                     if interaction.user.id != self.author.id:
-                        await interaction.response.send_message("This isn't your battle!", ephemeral=True)
-                        return
+                        await interaction.response.send_message("This isn't your battle!", ephemeral=True); return
                     self.selected_character = char
                     self.stop()
                     await interaction.response.defer()
                 button.callback = button_callback
                 self.add_item(button)
-        
         async def on_timeout(self):
-            # Auto-select the first available character if timeout
-            for char in self.team:
-                if char['current_hp'] > 0:
-                    self.selected_character = char
-                    break
+            if self.team: self.selected_character = self.team[0]
             self.stop()
 
-    @commands.command(name='pull', aliases=['p'], help="!pull - Spend 50 coins to get a random character.", category="Economic")
+    class EndBattleView(discord.ui.View):
+        def __init__(self, opponent):
+            super().__init__(timeout=30.0)
+            self.opponent = opponent
+            self.agreed = False
+        
+        async def interaction_check(self, interaction: discord.Interaction) -> bool:
+            return interaction.user.id == self.opponent.id
+        
+        @discord.ui.button(label="Agree to End", style=discord.ButtonStyle.green)
+        async def agree(self, interaction: discord.Interaction, button: discord.ui.Button):
+            self.agreed = True
+            await interaction.response.send_message("You have agreed to end the battle.", ephemeral=True)
+            self.stop()
+
+        @discord.ui.button(label="Decline", style=discord.ButtonStyle.red)
+        async def decline(self, interaction: discord.Interaction, button: discord.ui.Button):
+            await interaction.response.send_message("You have declined to end the battle.", ephemeral=True)
+            self.stop()
+
+    @commands.command(name='battle', help="!battle <member> - Challenge another player to a battle.", category="Battle")
     @has_accepted_rules()
-    async def pull(self, ctx):
-        player = db.get_player(ctx.author.id)
-        if player['coins'] < 50:
-            await ctx.send("You don't have enough coins! (Need 50)"); return
-        if not self.characters:
-            await ctx.send("Character data is not loaded."); return
-
-        player['coins'] -= 50
-        char_name, char_data = random.choice(list(self.characters.items()))
-        base_char = {"name": char_name, **char_data}
-        
-        # Create character instance with the new IV system
-        new_char_instance = self._create_character_instance(base_char, 0)
-        char_id = player['next_character_id']
-        player['characters'][char_id] = new_char_instance
-        player['latest_pull_id'] = char_id
-        player['next_character_id'] += 1
-        
-        db.update_player(ctx.author.id, player)
-        await ctx.send(f"You pulled **{char_name}** with **{new_char_instance['iv']}% IV**! Use `!info latest` to see their stats.")
-
-    @commands.command(name='balance', aliases=['bal'], help="!balance - Check your coin balance.", category="Economic")
-    @has_accepted_rules()
-    async def balance(self, ctx):
-        player = db.get_player(ctx.author.id)
-        await ctx.send(f"💰 You have **{player['coins']}** coins.")
-
-    @commands.command(name='daily', help="!daily - Claim your daily coins.", category="Economic")
-    @has_accepted_rules()
-    async def daily(self, ctx):
-        player = db.get_player(ctx.author.id)
-        today, today_str = datetime.date.today(), datetime.date.today().isoformat()
-        if player['last_daily_date'] == today_str:
-            await ctx.send("You have already claimed your daily reward today!"); return
-        
-        yesterday = today - datetime.timedelta(days=1)
-        player['daily_streak'] = player['daily_streak'] + 1 if player['last_daily_date'] == yesterday.isoformat() else 1
-        base_reward, bonus = 50, (player['daily_streak'] - 1) * random.randint(10, 20)
-        total_reward = min(200, base_reward + bonus)
-        
-        player['coins'] += total_reward
-        player['last_daily_date'] = today_str
-        db.update_player(ctx.author.id, player)
-        await ctx.send(f"🎉 You claimed **{total_reward}** coins! Your current streak is **{player['daily_streak']}** day(s).")
-
-    @commands.command(name='allcharacters', aliases=['chars', 'characters'], help="!characters [sort_key] - View all characters.", category="Fun")
-    @has_accepted_rules()
-    async def allcharacters(self, ctx, sort_by: str = "name"):
-        valid_sorts = ['atk', 'def', 'spd', 'res', 'hp', 'name']
-        sort_key = sort_by.lower()
-        if sort_key not in valid_sorts:
-            await ctx.send(f"Invalid sort key. Use one of: `{'`, `'.join(valid_sorts)}`"); return
-        
-        char_list = list(self.characters.items())
-        sorted_chars = sorted(char_list, key=lambda i: i[0]) if sort_key == 'name' else sorted(char_list, key=lambda i: i[1].get(sort_key.upper(), 0), reverse=True)
-        
-        pages = [sorted_chars[i:i + 10] for i in range(0, len(sorted_chars), 10)]
-        current_page = 0
-
-        def create_embed(page_num):
-            embed = discord.Embed(title=f"All Characters (Sorted by {sort_key.upper()})", description=f"Page {page_num + 1}/{len(pages)}", color=discord.Color.dark_teal())
-            for name, stats in pages[page_num]:
-                embed.add_field(name=name, value=f"`ATK:{stats['ATK']}|DEF:{stats['DEF']}|SPD:{stats['SPD']}|RES:{stats['RES']}|HP:{stats['HP']}`", inline=False)
-            return embed
-
-        message = await ctx.send(embed=create_embed(current_page))
-        await message.add_reaction('◀️'); await message.add_reaction('▶️')
-
-        def check(r, u): return u == ctx.author and str(r.emoji) in ['◀️', '▶️'] and r.message.id == message.id
-
-        while True:
-            try:
-                reaction, user = await self.bot.wait_for('reaction_add', timeout=60.0, check=check)
-                if str(reaction.emoji) == '▶️' and current_page < len(pages) - 1: current_page += 1
-                elif str(reaction.emoji) == '◀️' and current_page > 0: current_page -= 1
-                await message.edit(embed=create_embed(current_page)); await message.remove_reaction(reaction, user)
-            except asyncio.TimeoutError:
-                await message.clear_reactions(); break
-
-    @commands.command(name='info', aliases=['il'], help="!info [latest|id] - Shows info for a character.", category="Fun")
-    @has_accepted_rules()
-    async def info(self, ctx, char_identifier: str = "latest"):
-        player = db.get_player(ctx.author.id)
-        char_id = player['latest_pull_id'] if char_identifier.lower() == 'latest' else int(char_identifier) if char_identifier.isdigit() else None
-        
-        if char_id is None:
-            await ctx.send("Invalid input. Use `!info latest` or `!info <character_id>`."); return
-        if char_id not in player['characters']:
-            await ctx.send("You don't own a character with that ID."); return
-            
-        char = player['characters'][char_id]
-        embed = discord.Embed(title=f"{char['name']} (ID: {char_id}, IV: {char['iv']}%)", description=char['description'], color=discord.Color.blue())
-        xp_needed = self._get_xp_for_next_level(char['level'])
-        
-        # Display stats with individual IVs
-        stats_text = f"**Lvl:** {char['level']} ({char['xp']}/{xp_needed} XP)\n"
-        
-        # Add each stat with its IV value
-        for stat, value in char['stats'].items():
-            iv_value = char.get('individual_ivs', {}).get(stat, 0)
-            stats_text += f"**{stat}:** {value} - IV: {iv_value}/31\n"
-        
-        embed.add_field(name="Stats", value=stats_text, inline=False)
-        embed.add_field(name="Ability", value=char['ability'], inline=True)
-        embed.add_field(name="Equipped", value=char.get('equipped_item', "None"), inline=True)
-        
-        # New move display logic
-        all_possible_moves = self.attacks.get('characters', {}).get(str(char['id']), [])
-        
-        moveset_names = [m['name'] for m in all_possible_moves if m['name'] in char['moveset']]
-        unlocked_names = [m['name'] for m in all_possible_moves if m['name'] not in moveset_names and m['unlock_level'] <= char['level']]
-        locked_moves = [m for m in all_possible_moves if m['unlock_level'] > char['level']]
-        
-        active_moves = "\n".join(f"`{name}`" for name in moveset_names) or "No moves equipped."
-        available_moves = "\n".join(f"`{name}`" for name in unlocked_names) or "No other moves unlocked."
-        upcoming_moves = "\n".join(f"`{m['name']}` (Lvl {m['unlock_level']})" for m in locked_moves) or "No upcoming moves."
-        
-        embed.add_field(name="⚔️ Active Moveset", value=active_moves, inline=False)
-        embed.add_field(name="📚 Available Moves", value=available_moves, inline=True)
-        embed.add_field(name="🔒 Locked Moves", value=upcoming_moves, inline=True)
-        embed.set_footer(text=f"Total Stats: {sum(char['stats'].values())} | Total IV: {char['iv']}%")
-        await ctx.send(embed=embed)
-            
-    @commands.command(name='collection', aliases=['col'], help="!collection - View your character collection.", category="Fun")
-    @has_accepted_rules()
-    async def collection(self, ctx):
-        player = db.get_player(ctx.author.id)
-        if not player['characters']:
-            await ctx.send("Your collection is empty!"); return
-        
-        embed = discord.Embed(title=f"{ctx.author.display_name}'s Collection", color=discord.Color.purple())
-        desc = "".join([f"`{cid}`: **Lvl {c['level']} {c['name']}** ({c['iv']}% IV) {'🛡️' if cid in player['team'] else ''}{'⭐' if cid == player['selected_character_id'] else ''}\n" for cid, c in player['characters'].items()])
-        embed.description = desc
-        await ctx.send(embed=embed)
-
-    @commands.command(name='select', help="!select <id> - Select your active character for XP gain.", category="Team")
-    @has_accepted_rules()
-    async def select(self, ctx, char_id: int):
-        player = db.get_player(ctx.author.id)
-        if char_id not in player['characters']:
-            await ctx.send("You don't own a character with that ID."); return
-        player['selected_character_id'] = char_id
-        db.update_player(ctx.author.id, player)
-        await ctx.send(f"You have selected **{player['characters'][char_id]['name']}** to gain XP.")
-
-    @commands.group(name='shop', invoke_without_command=True, help="!shop - Displays the item shop.", category="Shop")
-    @has_accepted_rules()
-    async def shop(self, ctx):
-        embed = discord.Embed(title="Shop", description="Welcome!", color=discord.Color.gold())
-        embed.add_field(name="Item Box", value="Costs 200 coins.\nUse `!shop buy itembox`", inline=False)
-        await ctx.send(embed=embed)
-
-    @shop.command(name='buy')
-    @has_accepted_rules()
-    async def buy(self, ctx, item: str):
-        if item.lower() != 'itembox':
-            await ctx.send("That item isn't in the shop."); return
-        
-        player = db.get_player(ctx.author.id)
-        if player['coins'] < 200:
-            await ctx.send("You don't have enough coins! (Need 200)"); return
-            
-        player['coins'] -= 200
-        rarity = random.choices(["common", "rare", "epic", "legendary"], [65, 25, 9.5, 0.5], k=1)[0]
-        item_type = random.choice(list(self.items.keys()))
-        item_full_name = f"{item_type} {rarity}"
-        player['inventory'][item_full_name] += 1
-        db.update_player(ctx.author.id, player)
-        await ctx.send(f"You bought an Item Box and found a **{item_full_name}**!")
-    
-    @commands.command(name='inventory', aliases=['inv'], help="!inventory - View your items.", category="Fun")
-    @has_accepted_rules()
-    async def inventory(self, ctx):
-        player = db.get_player(ctx.author.id)
-        if not player['inventory']:
-            await ctx.send("Your inventory is empty."); return
-        embed = discord.Embed(title="Your Inventory", color=discord.Color.orange())
-        embed.description = "\n".join(f"**{name}**: x{count}" for name, count in player['inventory'].items())
-        await ctx.send(embed=embed)
-
-    @commands.group(name='team', aliases=['t'], invoke_without_command=True, help="!team [view|create|remove]", category="Team")
-    @has_accepted_rules()
-    async def team(self, ctx):
-        await self.view_team(ctx)
-
-    @team.command(name='view', aliases=['v'])
-    @has_accepted_rules()
-    async def view_team(self, ctx):
-        player = db.get_player(ctx.author.id)
-        if not player['team']:
-            await ctx.send("You don't have a team. Use `!team create <id1> ...`"); return
-        embed = discord.Embed(title="Your Active Team", color=discord.Color.green())
-        for char_id in player['team']:
-            char_info = player['characters'][char_id]
-            embed.add_field(name=f"{char_info['name']} (ID: {char_id})", value=f"Lvl {char_info['level']}, IV: {char_info['iv']}%", inline=False)
-        await ctx.send(embed=embed)
-
-    @team.command(name='create', aliases=['c'])
-    @has_accepted_rules()
-    async def create_team(self, ctx, *char_ids: int):
-        player = db.get_player(ctx.author.id)
-        if not 1 <= len(char_ids) <= 3:
-            await ctx.send("Please provide 1 to 3 character IDs."); return
-        if len(set(char_ids)) != len(char_ids):
-            await ctx.send("You cannot have duplicate characters on a team."); return
-            
-        new_team = []
-        for char_id in char_ids:
-            if char_id not in player['characters']:
-                await ctx.send(f"ID `{char_id}` not found in your collection."); return
-            new_team.append(char_id)
-        player['team'] = new_team
-        db.update_player(ctx.author.id, player)
-        await ctx.send("Team set!"); await self.view_team(ctx)
-
-    @team.command(name='remove', aliases=['r'])
-    @has_accepted_rules()
-    async def remove_from_team(self, ctx, char_id: int):
-        player = db.get_player(ctx.author.id)
-        if char_id not in player['team']:
-            await ctx.send("That character isn't in your team."); return
-        player['team'].remove(char_id)
-        db.update_player(ctx.author.id, player)
-        await ctx.send("Character removed."); await self.view_team(ctx)
-
-    @commands.command(name='equip', aliases=['eq'], help="!equip <char_id> <item name>", category="Team")
-    @has_accepted_rules()
-    async def equip(self, ctx, char_id: int, *, item_name: str):
-        player = db.get_player(ctx.author.id)
-        if char_id not in player['characters']:
-            await ctx.send("Invalid character ID."); return
-        
-        item_name_lower = item_name.lower()
-        found_item = next((inv_item for inv_item in player['inventory'] if item_name_lower == inv_item.lower()), None)
-        if not found_item or player['inventory'][found_item] == 0:
-            await ctx.send(f"You don't have an item named '{item_name}'."); return
-            
-        character = player['characters'][char_id]
-        if character['equipped_item']:
-            await ctx.send(f"Unequip the current item first with `!unequip {char_id}`."); return
-        
-        character['equipped_item'] = found_item
-        player['inventory'][found_item] -= 1
-        if player['inventory'][found_item] == 0: del player['inventory'][found_item]
-        db.update_player(ctx.author.id, player)
-        await ctx.send(f"Equipped **{found_item}** on **{character['name']}**.")
-
-    @commands.command(name='unequip', aliases=['ue'], help="!unequip <char_id>", category="Team")
-    @has_accepted_rules()
-    async def unequip(self, ctx, char_id: int):
-        player = db.get_player(ctx.author.id)
-        if char_id not in player['characters']:
-            await ctx.send("Invalid character ID."); return
-        
-        character = player['characters'][char_id]
-        item_name = character['equipped_item']
-        if not item_name:
-            await ctx.send(f"{character['name']} has no item equipped."); return
-            
-        character['equipped_item'] = None
-        player['inventory'][item_name] += 1
-        db.update_player(ctx.author.id, player)
-        await ctx.send(f"Unequipped **{item_name}** from **{character['name']}**.")
-
-    @commands.group(name='moves', aliases=['m'], invoke_without_command=True, help="!moves [id] - View your character's moves.", category="Team")
-    @has_accepted_rules()
-    async def moves(self, ctx, char_id: int = None):
-        player = db.get_player(ctx.author.id)
-        if char_id is None:
-            char_id = player.get('selected_character_id')
-            if not char_id:
-                await ctx.send("Please select a character first with `!select <id>` or specify an ID."); return
-        
-        if char_id not in player['characters']:
-            await ctx.send("You don't own a character with that ID."); return
-            
-        character = player['characters'][char_id]
-        embed = discord.Embed(title=f"Moveset for {character['name']} (Lvl {character['level']})", color=discord.Color.orange())
-        
-        all_possible_moves = self.attacks.get('characters', {}).get(str(character.get('id')), [])
-        active_moves_names = character.get('moveset', [])
-        
-        active_moves_details = [f"**{m['name']}** - Power: {m.get('power', 0)}, Acc: {m.get('accuracy', 100)}%"
-                                for m_name in active_moves_names
-                                if (m := next((m for m in self.attacks.get('physical', []) + self.attacks.get('special', []) + all_possible_moves if m['name'] == m_name), None))]
-        embed.add_field(name="⚔️ Active Moveset", value="\n".join(active_moves_details) or "None", inline=False)
-
-        unlocked_and_inactive = [f"**{m['name']}** - Power: {m.get('power', 0)}, Acc: {m.get('accuracy', 100)}%"
-                                for m in all_possible_moves
-                                if m['unlock_level'] <= character['level'] and m['name'] not in active_moves_names]
-        if unlocked_and_inactive:
-            embed.add_field(name="📚 Unlocked (Inactive)", value="\n".join(unlocked_and_inactive), inline=False)
-            
-        locked_moves = [f"**{m['name']}** (Lvl {m['unlock_level']})"
-                        for m in all_possible_moves
-                        if m['unlock_level'] > character['level']]
-        if locked_moves:
-            embed.add_field(name="🔒 Locked", value="\n".join(locked_moves), inline=False)
-
-        embed.set_footer(text="Use `!moves swap` to change your active moveset.")
-        await ctx.send(embed=embed)
-
-    @moves.command(name='swap')
-    @has_accepted_rules()
-    async def swap_moves(self, ctx, char_id: int, new_move: str, old_move: str):
-        player = db.get_player(ctx.author.id)
-        if char_id not in player['characters']:
-            await ctx.send("You don't own a character with that ID."); return
-
-        character = player['characters'][char_id]
-        common_move_names = [m['name'].lower() for m in self.attacks.get('physical', []) + self.attacks.get('special', [])]
-        old_move_name = next((m for m in character.get('moveset', []) if m.lower() == old_move.lower()), None)
-        
-        if not old_move_name:
-            await ctx.send(f"'{old_move}' is not in your active moveset."); return
-
-        # Prevent swapping out common attacks, as they are the default moves
-        if old_move_name.lower() in [m['name'].lower() for m in self.attacks['physical']] or old_move_name.lower() in [m['name'].lower() for m in self.attacks['special']]:
-             await ctx.send(f"You cannot swap out a common attack like '{old_move_name}'."); return
-
-        all_special_moves = self.attacks.get('characters', {}).get(str(character.get('id')), [])
-        new_move_data = next((m for m in all_special_moves if m['name'].lower() == new_move.lower()), None)
-        
-        if not new_move_data:
-            await ctx.send(f"'{new_move}' is not a valid special move for this character."); return
-        if character['level'] < new_move_data['unlock_level']:
-            await ctx.send(f"You haven't unlocked '{new_move_data['name']}' yet (requires Lvl {new_move_data['unlock_level']})."); return
-        if new_move_data['name'] in character.get('moveset', []):
-            await ctx.send(f"'{new_move_data['name']}' is already in your active moveset."); return
-
-        try:
-            active_moveset = character.get('moveset', [])
-            index = active_moveset.index(old_move_name)
-            active_moveset[index] = new_move_data['name']
-        except ValueError:
-             await ctx.send(f"An unexpected error occurred."); return
-
-        character['moveset'] = active_moveset
-        db.update_player(ctx.author.id, player)
-        await ctx.send(f"Swapped **{old_move_name}** for **{new_move_data['name']}** on {character['name']}!")
-    
-    @commands.command(name='battle', help="!battle <member> | !battle @bot [level]", category="Battle")
-    @has_accepted_rules()
-    async def battle(self, ctx, opponent: discord.Member, level: int = None):
+    async def battle(self, ctx, opponent: discord.Member):
         challenger = ctx.author
-
-        if opponent.id == self.bot.user.id:
-            player_team_data = db.get_player(challenger.id)
-            if not player_team_data['team']: await ctx.send("You need a team to battle!"); return
-            if level is None:
-                team_levels = [player_team_data['characters'][cid]['level'] for cid in player_team_data['team']]
-                level = max(1, sum(team_levels) // len(team_levels))
-            if not 1 <= level <= 100: await ctx.send("Level must be between 1 and 100."); return
-            bot_team_chars = random.sample(list(self.characters.items()), 3)
-            bot_team = [self._scale_character_to_level({"name": name, **data}, level) for name, data in bot_team_chars]
-            await self._run_interactive_battle(ctx, challenger, self.bot.user, db.get_player(challenger.id), None, bot_team=bot_team)
-            return
-
-        if challenger == opponent: await ctx.send("You can't challenge yourself!"); return
-        if opponent.bot: await ctx.send("You can't challenge a bot this way."); return
+        if challenger == opponent:
+            await ctx.send("You can't challenge yourself!"); return
+        if opponent.bot:
+            await ctx.send("You cannot battle bots with this command. Use `!battlecz` to fight an AI."); return
         
         battle_key = tuple(sorted((challenger.id, opponent.id)))
-        if battle_key in self.active_battles: await ctx.send("One of you is already in a battle!"); return
+        if battle_key in self.active_battles:
+            await ctx.send("One of you is already in a battle!"); return
         
         challenger_player, opponent_player = db.get_player(challenger.id), db.get_player(opponent.id)
-        if not challenger_player['team']: await ctx.send("You need a team first."); return
-        if not opponent_player['team']: await ctx.send(f"{opponent.display_name} does not have a team."); return
+        if not challenger_player['team']:
+            await ctx.send("You need a team first."); return
+        if not opponent_player['team']:
+            await ctx.send(f"{opponent.display_name} does not have a team."); return
         
-        req_msg = await ctx.send(f"{opponent.mention}, you've been challenged by {challenger.mention}! React with ✅ to accept.")
+        req_msg = await ctx.send(f"{opponent.mention}, you've been challenged by {challenger.display_name}! React with ✅ to accept.")
         await req_msg.add_reaction('✅'); await req_msg.add_reaction('❌')
+        
         def check(r, u): return u == opponent and str(r.emoji) in ['✅', '❌'] and r.message.id == req_msg.id
         try:
             reaction, _ = await self.bot.wait_for('reaction_add', timeout=60.0, check=check)
-            if str(reaction.emoji) == '❌': await req_msg.edit(content=f"{opponent.display_name} declined."); return
-        except asyncio.TimeoutError: await req_msg.edit(content="Battle request timed out."); return
+            if str(reaction.emoji) == '❌':
+                await req_msg.edit(content=f"{opponent.display_name} declined the battle."); return
+        except asyncio.TimeoutError:
+            await req_msg.edit(content="Battle request timed out."); return
+        
         await req_msg.delete()
-        await self._run_interactive_battle(ctx, challenger, opponent, challenger_player, opponent_player)
+        
+        task = asyncio.create_task(self._run_interactive_battle(ctx, challenger, opponent, challenger_player, opponent_player))
+        self.active_battles[battle_key] = {"task": task, "channel": ctx.channel}
 
-    async def _run_interactive_battle(self, ctx, p1_user, p2_user, p1_data, p2_data, bot_team=None):
+    async def _get_player_move(self, user, active_char, ctx):
+        """Prompts a player for their attack via DM."""
+        available_attacks = self.get_character_attacks(active_char)
+        view = self.BattleView(user, available_attacks)
+        
+        try:
+            prompt_msg = await user.send(f"Choose an attack for **{active_char['name']}**.", view=view)
+        except discord.Forbidden:
+            prompt_msg = await ctx.send(f"{user.mention}, I can't DM you! Please choose your move here.", view=view, delete_after=60.0)
+
+        await view.wait()
+        return view.chosen_attack
+
+    async def _prompt_character_selection(self, user, team, ctx, prompt_text):
+        """Helper to prompt a user to select a character via DM."""
+        view = self.CharacterSelectView(user, team)
+        embed = discord.Embed(title="Character Selection", description=prompt_text, color=user.color or discord.Color.default())
+        
+        try:
+            prompt_message = await user.send(embed=embed, view=view)
+        except discord.Forbidden:
+            prompt_message = await ctx.send(content=user.mention, embed=embed, view=view)
+
+        await view.wait()
+        try: await prompt_message.delete()
+        except discord.NotFound: pass
+        
+        return view.selected_character
+
+    async def _run_interactive_battle(self, ctx, p1_user, p2_user, p1_data, p2_data):
+        stats_cog = self.bot.get_cog('Stat Calculations')
+        if not stats_cog:
+            await ctx.send("Battle system is offline, stat module not loaded."); return
+
         battle_key = tuple(sorted((p1_user.id, p2_user.id)))
-        self.active_battles.add(battle_key)
-
-        def prep_team(player_data):
-            team = []
-            if not player_data: return []
-            for char_id in player_data.get('team', []):
-                inst = player_data['characters'][char_id].copy()
-                inst['current_hp'] = inst['stats']['HP']
-                inst['char_id'] = char_id  # Store the character ID for reference
-                if inst['equipped_item']:
-                    name, rarity = inst['equipped_item'].rsplit(' ', 1)
-                    if name in self.items and rarity in self.items[name]:
-                        boost = self.items[name][rarity]
-                        stat, val = boost['stat'], int(inst['stats'][boost['stat']] * (boost['boost'] / 100))
-                        inst['stats'][stat] += val
-                team.append(inst)
-            return team
-
-        team1, team2 = prep_team(p1_data), bot_team if bot_team else prep_team(p2_data)
-        log = []
         battle_message = None
         
-        # Active character tracking
-        active_char1 = None
-        active_char2 = None
-        pending_damage = None
-        pending_target = None
-        
-        # Character selection at battle start
-        if not p1_user.bot and team1:
-            embed = discord.Embed(title=f"Battle Start: {p1_user.display_name} vs {p2_user.display_name}", 
-                                 description="Select your starting character!", 
-                                 color=discord.Color.blue())
-            view = self.CharacterSelectView(p1_user, team1)
-            battle_message = await ctx.send(embed=embed, view=view)
-            await view.wait()
-            active_char1 = view.selected_character
-            if not active_char1 and team1:  # Fallback if no selection
-                active_char1 = team1[0]
-            log.append(f"🔄 {p1_user.display_name} selected {active_char1['name']} to start the battle!")
-        elif team1:
-            active_char1 = team1[0]  # Bot selects first character
-            log.append(f"🔄 {p1_user.display_name} selected {active_char1['name']} to start the battle!")
+        try:
+            def prep_team(player_data):
+                team = []
+                for char_id in player_data.get('team', []):
+                    inst = player_data['characters'][char_id].copy()
+                    inst['stats'] = stats_cog.get_character_display_stats(inst)
+                    inst['current_hp'] = inst['stats']['HP']
+                    team.append(inst)
+                return team
+
+            team1, team2 = prep_team(p1_data), prep_team(p2_data)
+            players = {p1_user.id: {"team": team1, "user": p1_user}, p2_user.id: {"team": team2, "user": p2_user}}
             
-        if not p2_user.bot and team2:
-            embed = discord.Embed(title=f"Battle Start: {p1_user.display_name} vs {p2_user.display_name}", 
-                                 description="Select your starting character!", 
-                                 color=discord.Color.blue())
-            view = self.CharacterSelectView(p2_user, team2)
-            if battle_message:
-                await battle_message.edit(embed=embed, view=view)
-            else:
-                battle_message = await ctx.send(embed=embed, view=view)
-            await view.wait()
-            active_char2 = view.selected_character
-            if not active_char2 and team2:  # Fallback if no selection
-                active_char2 = team2[0]
-            log.append(f"🔄 {p2_user.display_name} selected {active_char2['name']} to start the battle!")
-        elif team2:
-            active_char2 = team2[0]  # Bot selects first character
-            log.append(f"🔄 {p2_user.display_name} selected {active_char2['name']} to start the battle!")
-        
-        # Create turn order based on active characters' speed
-        turn_order = [active_char1, active_char2]
-        turn_order.sort(key=lambda x: x['stats']['SPD'], reverse=True)
-        turn = 0
-        
-        # Main battle loop
-        while any(c['current_hp'] > 0 for c in team1) and any(c['current_hp'] > 0 for c in team2):
-            turn += 1
-            attacker = turn_order[(turn - 1) % len(turn_order)]
+            p1_active_char_task = self._prompt_character_selection(p1_user, team1, ctx, f"Choose your starting character!")
+            p2_active_char_task = self._prompt_character_selection(p2_user, team2, ctx, f"Choose your starting character!")
+            p1_active_char, p2_active_char = await asyncio.gather(p1_active_char_task, p2_active_char_task)
             
-            # Skip if attacker is defeated
-            if attacker['current_hp'] <= 0:
-                # Replace with next available character from the same team
-                is_p1_char = attacker == active_char1
-                available_chars = [c for c in (team1 if is_p1_char else team2) if c['current_hp'] > 0]
-                if not available_chars:
-                    continue  # No available characters, skip turn
-                    
-                if is_p1_char:
-                    active_char1 = available_chars[0]
-                    attacker = active_char1
-                    turn_order[turn_order.index(attacker)] = active_char1
-                    log.append(f"🔄 {p1_user.display_name}'s {active_char1['name']} enters the battle!")
-                else:
-                    active_char2 = available_chars[0]
-                    attacker = active_char2
-                    turn_order[turn_order.index(attacker)] = active_char2
-                    log.append(f"🔄 {p2_user.display_name}'s {active_char2['name']} enters the battle!")
+            players[p1_user.id]["active"] = p1_active_char
+            players[p2_user.id]["active"] = p2_active_char
             
-            is_p1_turn = attacker == active_char1
-            current_player = p1_user if is_p1_turn else p2_user
-            defender = active_char2 if is_p1_turn else active_char1
-            current_team = team1 if is_p1_turn else team2
-            opponent_team = team2 if is_p1_turn else team1
-            
-            # Check if there are any living defenders
-            if defender['current_hp'] <= 0:
-                available_defenders = [c for c in opponent_team if c['current_hp'] > 0]
-                if not available_defenders:
-                    break  # No available defenders, battle ends
-                defender = available_defenders[0]
-                if is_p1_turn:
-                    active_char2 = defender
-                else:
-                    active_char1 = defender
-                log.append(f"🔄 {defender['name']} enters the battle!")
-            
-            # Option to switch character or attack
-            switch_option = False
-            chosen_attack = None
-            
-            if not current_player.bot:
-                # Create embed for turn
-                embed = self._create_battle_embed(log, team1, team2, p1_user, p2_user, 
-                                               f"It's {current_player.display_name}'s turn with {attacker['name']}!")
+            log = [f"{p1_user.display_name} sends out **{p1_active_char['name']}**!", f"{p2_user.display_name} sends out **{p2_active_char['name']}**!"]
+            battle_message = await ctx.send(embed=self._create_battle_embed(log, team1, team2, p1_user, p2_user, p1_active_char, p2_active_char))
+
+            while all(any(c['current_hp'] > 0 for c in p['team']) for p in players.values()):
+                log = ["--- New Round ---"]
+                embed = self._create_battle_embed(log, team1, team2, p1_user, p2_user, p1_active_char, p2_active_char)
+                await battle_message.edit(embed=embed, view=None)
+
+                p1_action = await self._get_player_move(p1_user, p1_active_char, ctx)
+                p2_action = await self._get_player_move(p2_user, p2_active_char, ctx)
+
+                actions = [
+                    {'user_id': p1_user.id, 'attack': p1_action, 'active': p1_active_char, 'target': p2_active_char},
+                    {'user_id': p2_user.id, 'attack': p2_action, 'active': p2_active_char, 'target': p1_active_char}
+                ]
+                actions.sort(key=lambda x: x['active']['stats']['SPD'], reverse=True)
                 
-                # Add switch button
-                available_chars = [c for c in current_team if c['current_hp'] > 0 and c != attacker]
-                if available_chars:
-                    switch_view = discord.ui.View(timeout=60.0)
-                    switch_button = discord.ui.Button(label="Switch Character", style=discord.ButtonStyle.success)
-                    attack_button = discord.ui.Button(label="Attack", style=discord.ButtonStyle.danger)
+                for turn_data in actions:
+                    attacker_player = players[turn_data['user_id']]
+                    if attacker_player['active']['current_hp'] <= 0: continue
                     
-                    async def switch_callback(interaction):
-                        if interaction.user.id != current_player.id:
-                            await interaction.response.send_message("This isn't your turn!", ephemeral=True)
-                            return
-                        nonlocal switch_option
-                        switch_option = True
-                        switch_view.stop()
-                        await interaction.response.defer()
-                        
-                    async def attack_callback(interaction):
-                        if interaction.user.id != current_player.id:
-                            await interaction.response.send_message("This isn't your turn!", ephemeral=True)
-                            return
-                        switch_view.stop()
-                        await interaction.response.defer()
-                    
-                    switch_button.callback = switch_callback
-                    attack_button.callback = attack_callback
-                    switch_view.add_item(switch_button)
-                    switch_view.add_item(attack_button)
-                    
-                    if battle_message:
-                        await battle_message.edit(embed=embed, view=switch_view)
+                    defender = turn_data['target']
+                    if defender['current_hp'] <= 0:
+                        log.append(f"▶️ {attacker_player['active']['name']}'s target was already defeated!"); continue
+
+                    chosen_attack = turn_data['attack']
+                    if not chosen_attack:
+                        log.append(f"▶️ {attacker_player['user'].display_name}'s action failed due to timeout."); continue
+
+                    log.append(f"▶️ {attacker_player['active']['name']} uses **{chosen_attack['name']}** on {defender['name']}!")
+                    if random.randint(1, 100) > chosen_attack.get('accuracy', 100):
+                        log.append("💨 The attack missed!")
                     else:
-                        battle_message = await ctx.send(embed=embed, view=switch_view)
-                    
-                    await switch_view.wait()
-                    
-                    # Handle character switch
-                    if switch_option:
-                        char_select_view = self.CharacterSelectView(current_player, available_chars)
-                        embed.description = f"Select a character to switch to:"
-                        await battle_message.edit(embed=embed, view=char_select_view)
-                        await char_select_view.wait()
+                        dmg = stats_cog.calculate_damage(attacker_player['active'], defender, chosen_attack)
+                        defender['current_hp'] = max(0, defender['current_hp'] - dmg['damage'])
+                        log.append(f"💥 It hits for **{dmg['damage']}** damage!{' **CRITICAL HIT!**' if dmg['crit'] else ''}")
                         
-                        if char_select_view.selected_character:
-                            new_char = char_select_view.selected_character
-                            if is_p1_turn:
-                                active_char1 = new_char
-                                turn_order[turn_order.index(attacker)] = active_char1
-                            else:
-                                active_char2 = new_char
-                                turn_order[turn_order.index(attacker)] = active_char2
-                                
-                            log.append(f"🔄 {current_player.display_name} switched to {new_char['name']}!")
+                        if defender['current_hp'] == 0:
+                            log.append(f"💀 {defender['name']} has been defeated!")
                             
-                            # Apply pending damage if there was an attack
-                            if pending_damage and pending_target == (1 if is_p1_turn else 2):
-                                new_char['current_hp'] = max(0, new_char['current_hp'] - pending_damage)
-                                log.append(f"💥 The pending attack hits {new_char['name']} for **{pending_damage}** damage!")
-                                if new_char['current_hp'] == 0:
-                                    log.append(f"💀 {new_char['name']} has been defeated!")
-                                pending_damage = None
-                                pending_target = None
+                            opponent_id = p2_user.id if turn_data['user_id'] == p1_user.id else p1_user.id
+                            remaining = [c for c in players[opponent_id]['team'] if c['current_hp'] > 0]
+                            if not remaining: break
                             
-                            # Update the battle display and continue to next turn
-                            if len(log) > 5: log.pop(0)
-                            final_turn_embed = self._create_battle_embed(log, team1, team2, p1_user, p2_user)
-                            await battle_message.edit(embed=final_turn_embed, view=None)
-                            await asyncio.sleep(2)
-                            continue
-                
-                # If not switching or after switch UI, show attack options
-                available_attacks = self.get_character_attacks(attacker)
-                attack_view = self.BattleView(current_player, available_attacks)
-                embed = self._create_battle_embed(log, team1, team2, p1_user, p2_user, 
-                                               f"Select an attack for {attacker['name']}!")
-                await battle_message.edit(embed=embed, view=attack_view)
-                await attack_view.wait()
-                chosen_attack = attack_view.chosen_attack
-            else:
-                # Bot's turn logic
-                available_attacks = self.get_character_attacks(attacker)
-                chosen_attack = random.choice(available_attacks)
-                
-                # Bots have a chance to switch characters if they have low HP
-                if attacker['current_hp'] < attacker['stats']['HP'] * 0.3:  # Below 30% HP
-                    available_chars = [c for c in current_team if c['current_hp'] > 0 and c != attacker]
-                    if available_chars and random.random() < 0.7:  # 70% chance to switch when low HP
-                        new_char = random.choice(available_chars)
-                        if is_p1_turn:
-                            active_char1 = new_char
-                            turn_order[turn_order.index(attacker)] = active_char1
-                        else:
-                            active_char2 = new_char
-                            turn_order[turn_order.index(attacker)] = active_char2
-                            
-                        log.append(f"🔄 {current_player.display_name} switched to {new_char['name']}!")
-                        
-                        # Apply pending damage if there was an attack
-                        if pending_damage and pending_target == (1 if is_p1_turn else 2):
-                            new_char['current_hp'] = max(0, new_char['current_hp'] - pending_damage)
-                            log.append(f"💥 The pending attack hits {new_char['name']} for **{pending_damage}** damage!")
-                            if new_char['current_hp'] == 0:
-                                log.append(f"💀 {new_char['name']} has been defeated!")
-                            pending_damage = None
-                            pending_target = None
-                        
-                        # Update the battle display and continue to next turn
-                        if len(log) > 5: log.pop(0)
-                        final_turn_embed = self._create_battle_embed(log, team1, team2, p1_user, p2_user)
-                        if battle_message:
-                            await battle_message.edit(embed=final_turn_embed, view=None)
-                        else:
-                            battle_message = await ctx.send(embed=final_turn_embed)
-                        await asyncio.sleep(2)
-                        continue
+                            new_char = await self._prompt_character_selection(players[opponent_id]['user'], remaining, ctx, "Your character fainted! Choose your next one.")
+                            players[opponent_id]['active'] = new_char
+                            if opponent_id == p1_user.id: p1_active_char = new_char
+                            else: p2_active_char = new_char
+                            log.append(f"{players[opponent_id]['user'].display_name} sends out **{new_char['name']}**!")
 
-            # Handle attack execution
-            if not chosen_attack:  # Handle timeout case
-                chosen_attack = self.attacks.get('physical', [None])[0] or self.attacks.get('special', [None])[0]
-                if not chosen_attack:
-                    await ctx.send("An attack could not be determined. Battle ending."); break
+                embed = self._create_battle_embed(log, team1, team2, p1_user, p2_user, p1_active_char, p2_active_char)
+                await battle_message.edit(embed=embed)
+                await asyncio.sleep(4)
 
-            # Update attacker reference in case it changed due to switching
-            attacker = active_char1 if is_p1_turn else active_char2
-            defender = active_char2 if is_p1_turn else active_char1
-            
-            log.append(f"▶️ {attacker['name']} uses **{chosen_attack['name']}**!")
-            
-            # Calculate damage with improved formula
-            if random.randint(1, 100) > chosen_attack.get('accuracy', 100):
-                log.append(f"💨 The attack missed!")
-            else:
-                # Enhanced damage calculation
-                power = chosen_attack.get('power', 0)
-                atk = attacker['stats']['ATK']
-                sp_atk = attacker['stats'].get('SP_ATK', 0)
-                defense = defender['stats']['DEF']
-                res = defender['stats'].get('SP_DEF', 0)
-                
-                # Determine if attack is physical or special based on type attribute
-                is_physical = chosen_attack.get('type') == 'physical'
-                
-                # Calculate base damage using appropriate attack stat
-                if not is_physical and sp_atk > 0:
-                    attack_stat = sp_atk
-                    defense_stat = res
-                else:
-                    attack_stat = atk
-                    defense_stat = defense
-                
-                # Critical hit chance (10%)
-                critical = random.random() < 0.1
-                crit_multiplier = 1.5 if critical else 1.0
-                
-                # Base damage formula with stat scaling
-                # Using a simplified formula for better balance
-                base_damage = (power * attack_stat) / (100 + defense_stat)
-                
-                # Apply critical hit and randomness factor (85-100%)
-                random_factor = random.uniform(0.85, 1.0)
-                damage = max(1, round(base_damage * crit_multiplier * random_factor))
-                
-                # Store damage for potential character switching
-                pending_damage = damage
-                pending_target = 2 if is_p1_turn else 1
-                
-                # Apply damage to current defender
-                defender['current_hp'] = max(0, defender['current_hp'] - damage)
-                
-                # Create detailed damage message
-                damage_msg = f"💥 It hits {defender['name']} for **{damage}** damage!"
-                if critical:
-                    damage_msg += " 🔥 Critical hit!"
-                log.append(damage_msg)
-                
-                if defender['current_hp'] == 0:
-                    log.append(f"💀 {defender['name']} has been defeated!")
-                    
-                    # Clear pending damage since it was applied
-                    pending_damage = None
-                    pending_target = None
-            
-            if len(log) > 5: log.pop(0)
-            final_turn_embed = self._create_battle_embed(log, team1, team2, p1_user, p2_user)
-            if battle_message:
-                await battle_message.edit(embed=final_turn_embed, view=None)
-            else:
-                battle_message = await ctx.send(embed=final_turn_embed)
-            await asyncio.sleep(2)
+            winner = p1_user if any(c['current_hp'] > 0 for c in team1) else p2_user
+            final_embed = self._create_battle_embed(log, team1, team2, p1_user, p2_user, p1_active_char, p2_active_char)
+            final_embed.title = f"🏆 Winner: {winner.display_name}! 🏆"
+            await battle_message.edit(embed=final_embed, view=None)
+        
+        except asyncio.CancelledError:
+            log.append("Battle ended by mutual agreement.")
+            final_embed = self._create_battle_embed(log, team1, team2, p1_user, p2_user, p1_active_char, p2_active_char)
+            final_embed.title = "🤝 Battle Ended in a Draw 🤝"
+            await battle_message.edit(embed=final_embed, view=None)
 
-        # Determine winner
-        winner = p1_user if any(c['current_hp'] > 0 for c in team1) else p2_user
-        loser = p2_user if winner == p1_user else p1_user
+        except Exception as e:
+            print(f"An error occurred during battle: {e}")
+            await ctx.send("An unexpected error occurred and the battle has been cancelled.")
         
-        # Create a more visually appealing final embed
-        final_embed = discord.Embed(
-            title=f"🏆 Battle Concluded! 🏆",
-            description=f"**{winner.display_name}** has emerged victorious against **{loser.display_name}**!",
-            color=discord.Color.gold()
-        )
-        
-        # Show final team status with more details
-        t1_status = []
-        for c in team1:
-            status = f"**{c['name']}**: {round(c['current_hp'])}/{c['stats']['HP']} HP"
-            if c['current_hp'] <= 0:
-                status += " (💀 Defeated)"
-            else:
-                status += f" (❤️ {round(c['current_hp']/c['stats']['HP']*100)}% remaining)"
-            t1_status.append(status)
-            
-        t2_status = []
-        for c in team2:
-            status = f"**{c['name']}**: {round(c['current_hp'])}/{c['stats']['HP']} HP"
-            if c['current_hp'] <= 0:
-                status += " (💀 Defeated)"
-            else:
-                status += f" (❤️ {round(c['current_hp']/c['stats']['HP']*100)}% remaining)"
-            t2_status.append(status)
-            
-        final_embed.add_field(name=f"{p1_user.display_name}'s Team", value="\n".join(t1_status) or "Defeated", inline=True)
-        final_embed.add_field(name=f"{p2_user.display_name}'s Team", value="\n".join(t2_status) or "Defeated", inline=True)
-        final_embed.add_field(name="Battle Log", value="\n".join(log) or "Battle ended!", inline=False)
-        
-        # Add a footer with battle statistics
-        final_embed.set_footer(text=f"Battle concluded after {turn} turns | Character switching enabled | Enhanced damage system")
-        
-        await battle_message.edit(embed=final_embed, view=None)
-        self.active_battles.remove(battle_key)
+        finally:
+            if battle_key in self.active_battles:
+                del self.active_battles[battle_key]
 
-    def _create_battle_embed(self, log, t1, t2, p1_user, p2_user, footer_text=None):
+    def _create_hp_bar(self, current, max_val, length=10):
+        if max_val <= 0: return f"`[{' ' * length}]`"
+        percent = max(0, min(1, current / max_val))
+        filled_length = int(length * percent)
+        bar = '█' * filled_length + '─' * (length - filled_length)
+        return f"`[{bar}]`"
+
+    def _create_battle_embed(self, log, t1, t2, p1_user, p2_user, p1_active, p2_active, footer_text=None):
         embed = discord.Embed(title=f"⚔️ {p1_user.display_name} vs {p2_user.display_name}", color=discord.Color.red())
         
-        # Highlight active characters with emoji indicators
-        t1_status = []
-        for c in t1:
-            status_line = f"**{c['name']}**: {round(c['current_hp'])}/{c['stats']['HP']} HP"
-            # Add stat display for active characters
-            if c['current_hp'] > 0:
-                status_line += f" | ATK: {c['stats']['ATK']} | DEF: {c['stats']['DEF']}"
-            # Add indicator for active character
-            if any(c == active for active in ([t1[0]] if t1 else [])):
-                status_line = f"▶️ {status_line}"
-            t1_status.append(status_line)
+        for user, team, active_char in [(p1_user, t1, p1_active), (p2_user, t2, p2_active)]:
+            team_status = []
+            for c in team:
+                hp_bar = self._create_hp_bar(c['current_hp'], c['stats']['HP'])
+                active_indicator = "▶️" if c is active_char and c['current_hp'] > 0 else ""
+                status = "KO" if c['current_hp'] <= 0 else f"{round(c['current_hp'])}/{c['stats']['HP']}"
+                team_status.append(f"{active_indicator}**{c['name']}**: {hp_bar} `{status}`")
+            embed.add_field(name=f"{user.display_name}'s Team", value="\n".join(team_status) or "Defeated", inline=False)
             
-        t2_status = []
-        for c in t2:
-            status_line = f"**{c['name']}**: {round(c['current_hp'])}/{c['stats']['HP']} HP"
-            # Add stat display for active characters
-            if c['current_hp'] > 0:
-                status_line += f" | ATK: {c['stats']['ATK']} | DEF: {c['stats']['DEF']}"
-            # Add indicator for active character
-            if any(c == active for active in ([t2[0]] if t2 else [])):
-                status_line = f"▶️ {status_line}"
-            t2_status.append(status_line)
-            
-        embed.add_field(name=f"{p1_user.display_name}'s Team", value="\n".join(t1_status) or "Defeated", inline=True)
-        embed.add_field(name=f"{p2_user.display_name}'s Team", value="\n".join(t2_status) or "Defeated", inline=True)
-        embed.add_field(name="Battle Log", value="\n".join(log) or "Battle starts!", inline=False)
+        embed.add_field(name="Battle Log", value=">>> " + "\n".join(log[-5:]) or "Battle starts!", inline=False)
         if footer_text:
             embed.set_footer(text=footer_text)
         return embed
+        
+    @commands.command(name='battleend', help="!battleend - Propose to end the current battle.", category="Battle")
+    async def battle_end(self, ctx):
+        battle_key = None
+        opponent = None
+
+        for key in self.active_battles.keys():
+            if ctx.author.id in key:
+                battle_key = key
+                opponent_id = key[1] if key[0] == ctx.author.id else key[0]
+                opponent = await self.bot.fetch_user(opponent_id)
+                break
+        
+        if not battle_key or not opponent:
+            await ctx.send("You are not currently in a battle."); return
+
+        view = self.EndBattleView(opponent)
+        await ctx.send(f"{opponent.mention}, {ctx.author.display_name} has proposed to end the battle. Do you agree?", view=view)
+
+        await view.wait()
+        if view.agreed:
+            task = self.active_battles[battle_key]['task']
+            task.cancel()
+            await ctx.send("Both players have agreed. The battle has been ended.")
+        else:
+            await ctx.send(f"{opponent.display_name} has declined to end the battle.")
 
     @commands.Cog.listener()
     async def on_message(self, message):
@@ -1038,42 +419,41 @@ class CZ(commands.Cog):
         if not char or char['level'] >= 100: return
         
         old_level = char['level']
-        
-        char['xp'] += random.randint(5, 15)
+        char['xp'] += random.randint(15, 25)
         xp_needed = self._get_xp_for_next_level(char['level'])
         
         leveled_up = False
         while char['xp'] >= xp_needed:
-            if char['level'] >= 100: char['xp'] = 0; break
-            char['level'] += 1; char['xp'] -= xp_needed
+            if char['level'] >= 100: 
+                char['xp'] = 0; break
+            char['level'] += 1
+            char['xp'] -= xp_needed
             leveled_up = True
-            for _ in range(3): char['stats'][random.choice(list(char['stats'].keys()))] += 1
             xp_needed = self._get_xp_for_next_level(char['level'])
 
         if leveled_up:
+            stats_cog = self.bot.get_cog('Stat Calculations')
+            base_char_data = self.characters.get(char['name'])
+            if base_char_data and stats_cog:
+                stat_keys = ['HP', 'ATK', 'DEF', 'SPD', 'SP_ATK', 'SP_DEF']
+                base_stats = {k: v for k, v in base_char_data.items() if k in stat_keys}
+                char['stats'] = stats_cog._calculate_stats(base_stats, char['individual_ivs'], char['level'])
+            
             await message.channel.send(f"🎉 **{char['name']}** (ID: {char_id}) leveled up to **Level {char['level']}**!")
 
-            # Check for newly unlocked moves
-            newly_unlocked = self._get_unlocked_attacks(char, char['level'])
-            current_moveset_names = {move for move in char.get('moveset', [])}
+            all_special_moves = self.attacks.get('characters', {}).get(str(char.get('id')), [])
+            newly_unlocked = [move for move in all_special_moves if old_level < move['unlock_level'] <= char['level']]
             
-            for new_move in newly_unlocked:
-                if new_move['name'] not in current_moveset_names:
-                    # A new move has been unlocked!
-                    await message.channel.send(f"✨ **{char['name']}** unlocked a new move: **{new_move['name']}** at level {char['level']}!")
+            if newly_unlocked:
+                for new_move in newly_unlocked:
+                    await message.channel.send(f"✨ **{char['name']}** unlocked a new move: **{new_move['name']}**!")
         
         db.update_player(message.author.id, player)
 
 async def setup(bot):
     cog = CZ(bot)
-    for command in cog.get_commands():
-        if not hasattr(command, 'category'):
-            if command.name == 'moves':
-                command.category = "Team"
-            else:
-                command.category = 'Fun'
-    
     if not cog.characters:
         print("❌ Critical Error: Could not load RPG cog due to missing characters.json data.")
     else:
         await bot.add_cog(cog)
+
