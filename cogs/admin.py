@@ -104,8 +104,23 @@ class Admin(commands.Cog):
         base_char_data = cz_cog.characters[found_char_name]
         base_char = {"name": found_char_name, **base_char_data}
         
-        # Create a perfect 100% IV instance
-        new_char_instance = cz_cog._create_character_instance(base_char, 100)
+        # Create a perfect IV instance with all stats at 31/31
+        new_char_instance = cz_cog._create_character_instance(base_char, 0)  # IV parameter is ignored now
+        
+        # Set all individual IVs to maximum (31)
+        for stat in new_char_instance['individual_ivs'].keys():
+            new_char_instance['individual_ivs'][stat] = 31
+            
+        # Recalculate overall IV percentage (should be 100%)
+        total_iv_points = sum(new_char_instance['individual_ivs'].values())
+        max_possible_iv_points = 31 * len(new_char_instance['individual_ivs'])
+        new_char_instance['iv'] = round((total_iv_points / max_possible_iv_points) * 100, 2)
+        
+        # Recalculate stats based on perfect IVs
+        stats_dict = {k: v for k, v in base_char.items() if k not in ["Ability", "Description", "name", "id"]}
+        for stat, base_value in stats_dict.items():
+            iv_boost = base_value * (new_char_instance['individual_ivs'][stat]/31) * 0.3
+            new_char_instance['stats'][stat] = max(1, round(base_value + iv_boost))
         
         char_id = player['next_character_id']
         player['characters'][char_id] = new_char_instance
@@ -182,4 +197,3 @@ class Admin(commands.Cog):
             
 async def setup(bot):
     await bot.add_cog(Admin(bot))
-

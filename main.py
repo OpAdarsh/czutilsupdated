@@ -1,11 +1,9 @@
-# main.py
 import discord
 from discord.ext import commands
 import os
 import json
 import asyncio
 from collections import defaultdict
-import database as db
 
 # --- Configuration Loading ---
 def load_config():
@@ -38,105 +36,121 @@ bot = commands.Bot(
 
 bot.config = config 
 
-COGS_EMOJIS = {
-    # Admin is hidden from the public menu
-    'Utils': '⚙️',
-    'Game': '🎮',
-    'CZ': '⚔️'
+CATEGORY_EMOJIS = {
+    'Economic': '💰',
+    'Team': '🛡️',
+    'Shop': '🛒',
+    'Battle': '⚔️',
+    'Bot Commands': '⚙️'
 }
 
-# --- Helper function for creating and sending a cog-specific help embed ---
-async def send_cog_help(destination, cog):
-    """Creates and sends an embed with the commands of a specific cog."""
+# --- Helper function for creating and sending a category-specific help embed ---
+async def send_category_help(destination, category_name):
+    """Creates and sends an embed with the commands of a specific category."""
+    embed = discord.Embed(
+        title=f"{CATEGORY_EMOJIS.get(category_name, '❓')} {category_name} Commands",
+        color=discord.Color.blue()
+    )
     
-    if cog.qualified_name == 'CZ':
-        embed = discord.Embed(
-            title=f"{COGS_EMOJIS.get(cog.qualified_name, '❓')} {cog.qualified_name} Commands",
-            description=f"Commands for the **{cog.qualified_name}** game:",
-            color=discord.Color.red()
-        )
-        
-        categorized_commands = defaultdict(list)
-        for command in sorted(cog.get_commands(), key=lambda cmd: cmd.name):
-            category = getattr(command, 'category', 'Uncategorized')
-            categorized_commands[category].append(command)
-        
-        category_order = ["Fun", "Economic", "Team", "Shop", "Battle", "Market"]
-        
-        for category in category_order:
-            if category in categorized_commands:
-                command_list = sorted(categorized_commands[category], key=lambda cmd: cmd.name)
-                command_text = ""
-                for command in command_list:
-                    aliases = f"| {', '.join(command.aliases)}" if command.aliases else ""
-                    help_desc = command.help.split('-')[1].strip() if '-' in command.help else command.help
-                    command_text += f"`{PREFIX}{command.name} {aliases}` - {help_desc}\n"
-                embed.add_field(name=f"**{category}**", value=command_text, inline=False)
-    
+    commands_in_category = []
+    for cog in bot.cogs.values():
+        for command in cog.get_commands():
+            if hasattr(command, 'category') and command.category == category_name:
+                commands_in_category.append(command)
+            elif isinstance(command, commands.Group):
+                for sub_command in command.commands:
+                    if hasattr(sub_command, 'category') and sub_command.category == category_name:
+                         commands_in_category.append(sub_command)
+                         
+    if category_name == 'Shop':
+        shop_group = bot.get_command('shop')
+        if shop_group:
+            commands_in_category.append(shop_group)
+    if category_name == 'Team':
+        team_group = bot.get_command('team')
+        if team_group:
+            commands_in_category.append(team_group)
+
+    if not commands_in_category:
+        embed.description = "No commands found in this category."
     else:
-        embed = discord.Embed(
-            title=f"{COGS_EMOJIS.get(cog.qualified_name, '❓')} {cog.qualified_name} Commands",
-            description=f"Commands for the **{cog.qualified_name}** cog:",
-            color=discord.Color.blue()
-        )
-        for command in sorted(cog.get_commands(), key=lambda cmd: cmd.name):
+        for command in sorted(commands_in_category, key=lambda cmd: cmd.name):
             aliases = f"| {', '.join(command.aliases)}" if command.aliases else ""
+            help_desc = command.help.split('-')[1].strip() if '-' in command.help else command.help
             embed.add_field(
-                name=f"`{PREFIX}{command.name} {aliases}`",
-                value=command.help or "No description provided.",
+                name=f"`{PREFIX}{command.qualified_name} {aliases}`",
+                value=help_desc,
                 inline=False
             )
-    
+
     if isinstance(destination, discord.Message):
         await destination.edit(embed=embed)
     else:
         await destination.send(embed=embed)
 
 @bot.command(name='help', description="Shows the list of available commands.")
-async def help_command(ctx, *, cog_name: str = None):
-    """Shows the list of available commands, paginated by cog with reactions."""
-    if cog_name:
-        # --- Special Handling for Admin Help ---
-        if cog_name.lower() == 'admin':
-            admin_id_str = bot.config.get('ADMIN_ID')
-            try:
-                is_admin = ctx.author.id == int(admin_id_str)
-            except (ValueError, TypeError):
-                is_admin = False
+async def help_command(ctx, *, category_name: str = None):
+    """Shows the list of available commands, paginated by category with reactions."""
+    # Special handling for Admin help
+    if category_name and category_name.lower() == 'admin':
+        admin_id_str = bot.config.get('ADMIN_ID')
+        try:
+            is_admin = ctx.author.id == int(admin_id_str)
+        except (ValueError, TypeError):
+            is_admin = False
 
-            if is_admin:
-                admin_cog = bot.get_cog('Admin')
-                if admin_cog and hasattr(admin_cog, 'get_admin_help_embed'):
-                    embed = admin_cog.get_admin_help_embed()
-                    await ctx.author.send(embed=embed) # Sends to DM for privacy
-                    await ctx.message.add_reaction('✅')
-                else:
-                    await ctx.send("The Admin cog seems to be missing its help function.")
-                return
+        if is_admin:
+            admin_cog = bot.get_cog('Admin')
+            if admin_cog and hasattr(admin_cog, 'get_admin_help_embed'):
+                embed = admin_cog.get_admin_help_embed()
+                await ctx.author.send(embed=embed)
+                await ctx.message.add_reaction('✅')
+            else:
+                await ctx.send("The Admin cog seems to be missing its help function.")
+            return
 
-        cog = bot.get_cog(cog_name.title())
-        if cog and cog.qualified_name in COGS_EMOJIS:
-            await send_cog_help(ctx, cog)
+    # If a specific category is requested
+    if category_name:
+        capitalized_category = category_name.title()
+        if capitalized_category in CATEGORY_EMOJIS:
+            await send_category_help(ctx, capitalized_category)
         else:
-            await ctx.send("That cog was not found.")
+            await ctx.send("That command category was not found.")
         return
 
+    # Show main help menu
     help_embed = discord.Embed(
         title="Help Menu",
         description="React with the emojis below to see commands for each category:",
         color=discord.Color.blue()
     )
     
-    for cog in bot.cogs.values():
-        if cog.qualified_name in COGS_EMOJIS:
-            help_embed.add_field(
-                name=f"{COGS_EMOJIS[cog.qualified_name]} {cog.qualified_name}",
-                value=f"`{len(cog.get_commands())}` commands",
-                inline=True
-            )
+    for category, emoji in CATEGORY_EMOJIS.items():
+        # Count commands in each category
+        command_count = 0
+        for cog in bot.cogs.values():
+            for command in cog.get_commands():
+                if hasattr(command, 'category') and command.category == category:
+                    command_count += 1
+                elif isinstance(command, commands.Group):
+                    for sub_command in command.commands:
+                        if hasattr(sub_command, 'category') and sub_command.category == category:
+                            command_count += 1
+        
+        # Add special cases for groups that don't have a category on the top-level command
+        if category == 'Shop':
+            if bot.get_command('shop'): command_count += 1
+        if category == 'Team':
+            if bot.get_command('team'): command_count += 1
+
+        help_embed.add_field(
+            name=f"{emoji} {category}",
+            value=f"`{command_count}` commands",
+            inline=True
+        )
     
     message = await ctx.send(embed=help_embed)
-    for emoji in COGS_EMOJIS.values():
+    for emoji in CATEGORY_EMOJIS.values():
         await message.add_reaction(emoji)
 
 @bot.event
@@ -149,23 +163,39 @@ async def on_reaction_add(reaction, user):
     except discord.errors.Forbidden:
         pass
     
-    for cog_name, emoji in COGS_EMOJIS.items():
+    for category_name, emoji in CATEGORY_EMOJIS.items():
         if str(reaction.emoji) == emoji:
-            cog = bot.get_cog(cog_name)
-            if cog:
-                await send_cog_help(reaction.message, cog)
-                return
+            await send_category_help(reaction.message, category_name)
+            return
 
 @bot.event
 async def on_ready():
     print(f"✅ Logged in as {bot.user.name} ({bot.user.id})")
-    db.init_db() # Initialize database on startup
+    # Initialize database on startup
+    # db.init_db() is called in a cog now
     
     for filename in os.listdir('./cogs'):
         if filename.endswith('.py'):
             try:
-                await bot.load_extension(f'cogs.{filename[:-3]}')
-                print(f"✅ Loaded cog: {filename[:-3]}")
+                cog_name = filename[:-3]
+                await bot.load_extension(f'cogs.{cog_name}')
+                print(f"✅ Loaded cog: {cog_name}")
+                # Set categories for commands after they are loaded
+                cog = bot.get_cog(cog_name.title())
+                if cog:
+                    for command in cog.walk_commands():
+                        if not hasattr(command, 'category'):
+                            if cog_name.lower() == 'rpg':
+                                if command.name in ['pull', 'balance', 'daily', 'allcharacters', 'info', 'collection']: command.category = 'Economic'
+                                elif command.name in ['select', 'team', 'equip', 'unequip', 'moves']: command.category = 'Team'
+                                elif command.name in ['shop', 'buy']: command.category = 'Shop'
+                                elif command.name in ['battle']: command.category = 'Battle'
+                            elif cog_name.lower() == 'utils':
+                                if command.name in ['afk', 'calculator', 'slots']: command.category = 'Bot Commands'
+                            elif cog_name.lower() == 'admin':
+                                # Admin is intentionally hidden from the public help menu
+                                command.category = 'Admin'
+
             except Exception as e:
                 print(f"❌ Failed to load cog {filename[:-3]}: {e}")
     
@@ -183,4 +213,3 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
-

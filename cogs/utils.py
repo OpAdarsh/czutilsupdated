@@ -5,7 +5,6 @@ import random
 import hashlib
 import asyncio
 import re
-from data.compliments import COMPLIMENTS
 # Import the database functions to manage player coins
 import database as db
 
@@ -16,60 +15,13 @@ class Utils(commands.Cog):
     """A cog for general utility commands like afk and fun commands."""
     def __init__(self, bot):
         self.bot = bot
-        self.ship_cache = {}
+        # self.ship_cache = {}  <-- Removed as the ship command is no longer needed.
 
     @commands.command(name='afk', help="!afk [message] - Sets your AFK status.")
     async def afk_command(self, ctx, *, message="I'm AFK right now."):
         AFK_USERS[ctx.author.id] = {"message": message}
         await ctx.send(f"💤 **{ctx.author.display_name}** is now AFK. Reason: *{message}*")
 
-    def _generate_ship_percentage(self, user1_id: int, user2_id: int) -> int:
-        key = f"{min(user1_id, user2_id)}-{max(user1_id, user2_id)}"
-        if key in self.ship_cache:
-            return self.ship_cache[key]
-        hash_object = hashlib.md5(key.encode())
-        percentage = int(hash_object.hexdigest(), 16) % 101
-        self.ship_cache[key] = percentage
-        return percentage
-
-    def _get_ship_description(self, percentage: int) -> dict:
-        for threshold, compliments_list in sorted(COMPLIMENTS.items(), reverse=True):
-            if percentage >= threshold:
-                return {"description": random.choice(compliments_list), "color": self._get_color(percentage)}
-        return {"description": random.choice(COMPLIMENTS[0]), "color": 0x8B0000}
-
-    def _get_color(self, percentage: int) -> int:
-        if percentage >= 95: return 0xFF69B4
-        if percentage >= 85: return 0xFF1493
-        if percentage >= 75: return 0xFF6347
-        if percentage >= 65: return 0xFFA500
-        if percentage >= 55: return 0xFFD700
-        if percentage >= 25: return 0x9370DB
-        return 0x696969
-
-    @commands.command(name='ship', help="!ship <member1> [member2] - Ships two members.")
-    async def ship(self, ctx, member1: discord.Member, member2: discord.Member = None):
-        if member2 is None:
-            member2 = ctx.author
-        if member1.id == member2.id:
-            await ctx.send("You can't ship a user with themselves!")
-            return
-
-        percentage = self._generate_ship_percentage(member1.id, member2.id)
-        ship_data = self._get_ship_description(percentage)
-
-        embed = discord.Embed(
-            title=f"{member1.display_name} ❤️ {member2.display_name}",
-            description=f"**{percentage}% Compatible**\n\n{ship_data['description']}", 
-            color=ship_data['color']
-        )
-        # Polished progress bar
-        progress_bar_blocks = int(percentage / 10)
-        progress_bar = f"{'❤️' * progress_bar_blocks}{'🖤' * (10 - progress_bar_blocks)}"
-        embed.add_field(name="Love Meter", value=progress_bar, inline=False)
-        embed.set_thumbnail(url=member1.avatar.url)
-        await ctx.send(embed=embed)
-        
     @commands.command(name='calculator', aliases=['calc'], help="!calc <expression> - A simple calculator.")
     async def calculator(self, ctx, *, expression: str):
         # Securely evaluate the expression
@@ -152,4 +104,3 @@ class Utils(commands.Cog):
 
 async def setup(bot):
     await bot.add_cog(Utils(bot))
-
