@@ -49,6 +49,8 @@ class BattleAI(commands.Cog, name="AI Battle"):
     def get_character_attacks(self, character):
         """Fetches the list of available attacks for a character instance."""
         active_moves = character.get('moveset', [])
+        # Filter out None values from moveset
+        active_moves = [move for move in active_moves if move is not None]
         all_possible_moves = self.attacks.get('physical', []) + self.attacks.get('special', []) + self.attacks.get('characters', {}).get(str(character.get('id')), [])
         return [m for m in all_possible_moves if m['name'] in active_moves]
 

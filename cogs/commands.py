@@ -606,12 +606,29 @@ class CharacterManagement(commands.Cog, name="Player Commands"):
         embed = discord.Embed(title=f"Moveset for {character['name']} (Lvl {character['level']})", color=discord.Color.orange())
         
         all_special_moves = self.attacks.get('characters', {}).get(str(character.get('id')), [])
-        active_moves_names = character.get('moveset', [])
+        active_moves = character.get('moveset', [None, None, None, None])
         
-        active_moves_details = [f"**{m['name']}** - Power: {m.get('power', 0)}, Acc: {m.get('accuracy', 100)}%"
-                                for m_name in active_moves_names
-                                if (m := next((m for m in self.attacks.get('physical', []) + self.attacks.get('special', []) + all_special_moves if m['name'] == m_name), None))]
-        embed.add_field(name="⚔️ Active Moveset", value="\n".join(active_moves_details) or "None", inline=False)
+        # Ensure moveset has 4 slots
+        while len(active_moves) < 4:
+            active_moves.append(None)
+        
+        # Display active moveset in 4-slot format
+        moveset_display = []
+        for i, move_name in enumerate(active_moves, 1):
+            if move_name:
+                # Find move data
+                move_data = next((m for m in self.attacks.get('physical', []) + self.attacks.get('special', []) + all_special_moves if m['name'] == move_name), None)
+                if move_data:
+                    power = move_data.get('power', 0)
+                    accuracy = move_data.get('accuracy', 100)
+                    move_type = move_data.get('type', 'N/A')
+                    moveset_display.append(f"**{i}.** {move_name} - Power: {power}, Acc: {accuracy}%, Type: {move_type}")
+                else:
+                    moveset_display.append(f"**{i}.** {move_name} - (Data not found)")
+            else:
+                moveset_display.append(f"**{i}.** *Empty Slot* - Use `!learn` to fill")
+        
+        embed.add_field(name="⚔️ Active Moveset (4 Slots)", value="\n".join(moveset_display), inline=False)
 
         unlocked_and_inactive = [f"**{m['name']}** - Power: {m.get('power', 0)}, Acc: {m.get('accuracy', 100)}%"
                                 for m in all_special_moves
@@ -625,7 +642,7 @@ class CharacterManagement(commands.Cog, name="Player Commands"):
         if locked_moves:
             embed.add_field(name="🔒 Locked", value="\n".join(locked_moves), inline=False)
 
-        embed.set_footer(text="Use `!moves swap <id_or_name>, <new_move>, <old_move>`")
+        embed.set_footer(text="Use `!moves swap <id_or_name>, <new_move>, <old_move>` or `!learn <id_or_name>, <move_name>`")
         await ctx.send(embed=embed)
 
     @moves.command(name='swap', help="!moves swap <id_or_name>, <new>, <old> - Swaps moves.", category="Team Management")
@@ -669,6 +686,98 @@ class CharacterManagement(commands.Cog, name="Player Commands"):
         character['moveset'] = active_moveset
         db.update_player(ctx.author.id, player)
         await ctx.send(f"Swapped **{old_move_name}** for **{new_move_data['name']}** on {character['name']}!")
+
+    @commands.command(name='learn', help="!learn <id_or_name>, <move_name> - Teaches a move to a character.", category="Team Management")
+    @has_accepted_rules()
+    async def learn_move(self, ctx, *, arguments: str):
+        try:
+            identifier, move_name = [arg.strip() for arg in arguments.split(',', 1)]
+        except ValueError:
+            await ctx.send("Invalid format. Use: `!learn <character>, <move_name>`")
+            return
+
+        player = db.get_player(ctx.author.id)
+        char_id = await self._find_character_from_input(ctx, player, identifier)
+        if char_id is None:
+            return
+
+        character = player['characters'][char_id]
+        
+        # Get all available moves for this character
+        all_special_moves = self.attacks.get('characters', {}).get(str(character.get('id')), [])
+        common_physical = self.attacks.get('physical', [])
+        common_special = self.attacks.get('special', [])
+        
+        # Find the move
+        move_data = None
+        for move_list in [common_physical, common_special, all_special_moves]:
+            move_data = next((m for m in move_list if m['name'].lower() == move_name.lower()), None)
+            if move_data:
+                break
+        
+        if not move_data:
+            await ctx.send(f"❌ **Error:** Move '{move_name}' not found.")
+            return
+        
+        # Check if it's a special move that requires unlocking
+        if move_data in all_special_moves and character['level'] < move_data['unlock_level']:
+            await ctx.send(f"❌ **Error:** '{move_data['name']}' requires level {move_data['unlock_level']} to learn (current level: {character['level']}).")
+            return
+        
+        # Check if move is already known
+        current_moveset = character.get('moveset', [None, None, None, None])
+        if move_data['name'] in current_moveset:
+            await ctx.send(f"❌ **{character['name']}** already knows **{move_data['name']}**!")
+            return
+        
+        # Find first empty slot or ask which slot to replace
+        empty_slot = None
+        for i, move in enumerate(current_moveset):
+            if move is None:
+                empty_slot = i
+                break
+        
+        if empty_slot is not None:
+            # Learn move in empty slot
+            current_moveset[empty_slot] = move_data['name']
+            character['moveset'] = current_moveset
+            db.update_player(ctx.author.id, player)
+            await ctx.send(f"✅ **{character['name']}** learned **{move_data['name']}** in slot {empty_slot + 1}!")
+        else:
+            # All slots full, show current moveset and ask for replacement
+            moveset_display = "\n".join([f"**{i+1}.** {move}" for i, move in enumerate(current_moveset)])
+            embed = discord.Embed(
+                title=f"{character['name']}'s Moveset is Full!",
+                description=f"Current moves:\n{moveset_display}\n\nWhich move slot (1-4) should **{move_data['name']}** replace?",
+                color=discord.Color.orange()
+            )
+            
+            message = await ctx.send(embed=embed)
+            
+            # Add number reactions
+            reactions = ['1️⃣', '2️⃣', '3️⃣', '4️⃣']
+            for reaction in reactions:
+                await message.add_reaction(reaction)
+            
+            def check(reaction, user):
+                return (user == ctx.author and 
+                       str(reaction.emoji) in reactions and 
+                       reaction.message.id == message.id)
+            
+            try:
+                reaction, user = await self.bot.wait_for('reaction_add', timeout=30.0, check=check)
+                slot_index = reactions.index(str(reaction.emoji))
+                old_move = current_moveset[slot_index]
+                current_moveset[slot_index] = move_data['name']
+                character['moveset'] = current_moveset
+                db.update_player(ctx.author.id, player)
+                
+                await message.delete()
+                await ctx.send(f"✅ **{character['name']}** forgot **{old_move}** and learned **{move_data['name']}** in slot {slot_index + 1}!")
+                
+            except asyncio.TimeoutError:
+                await message.delete()
+                await ctx.send("⏰ Move learning timed out. Try again when you're ready.")
 
 async def setup(bot):
     await bot.add_cog(CharacterManagement(bot))
