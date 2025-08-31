@@ -747,13 +747,14 @@ class CharacterManagement(commands.Cog, name="Player Commands"):
         move_key = 1
         for move in all_special_moves:
             if move['unlock_level'] <= character['level'] and move['name'] not in active_moves_names:
-                available_moves.append(f"`{move_key}` **{move['name']}** - PWR: {move.get('power', 0)}, ACC: {move.get('accuracy', 100)}%")
+                move_type = move.get('type', move.get('element', 'Normal'))
+                available_moves.append(f"`{move_key}` **{move['name']}** - PWR: {move.get('power', 0)}, ACC: {move.get('accuracy', 100)}%, Type: {move_type}")
                 move_key += 1
 
         if available_moves:
             embed.add_field(
                 name="📚 Available to Learn", 
-                value="\n".join(available_moves[:8]) + ("..." if len(available_moves) > 8 else ""), 
+                value="\n".join(available_moves[:10]) + (f"\n*... and {len(available_moves) - 10} more*" if len(available_moves) > 10 else ""), 
                 inline=False
             )
         else:
@@ -871,9 +872,9 @@ class CharacterManagement(commands.Cog, name="Player Commands"):
             except:
                 pass
 
-    @commands.command(name='learn', help="!learn [move_name] [position] - Shows moveset or teaches a move to selected character. Use !select first.", category="Team Management")
+    @commands.command(name='learn', help="!learn [key|move_name] [position] - Shows moveset or teaches a move to selected character. Use !select first.", category="Team Management")
     @has_accepted_rules()
-    async def learn_move(self, ctx, move_name: str = None, position: int = None):
+    async def learn_move(self, ctx, move_identifier: str = None, position: int = None):
         player = db.get_player(ctx.author.id)
 
         # Check if user has selected a character
@@ -901,8 +902,8 @@ class CharacterManagement(commands.Cog, name="Player Commands"):
         char_id = int(char_id)
         character = player['characters'][char_id]
 
-        # If no move_name provided, show the character's moveset
-        if move_name is None:
+        # If no move_identifier provided, show the character's moveset
+        if move_identifier is None:
             await self.show_character_moveset(ctx, character, char_id)
             return
 
@@ -920,30 +921,34 @@ class CharacterManagement(commands.Cog, name="Player Commands"):
         common_physical = self.attacks.get('physical', [])
         common_special = self.attacks.get('special', [])
 
-        # Check if move_name is a key number
+        # Get current moveset and available moves for key lookup
+        current_moveset = character.get('moveset', [None, None, None, None])
+        while len(current_moveset) < 4:
+            current_moveset.append(None)
+        
+        active_moves_names = [move for move in current_moveset if move is not None]
+        available_moves = [m for m in all_special_moves 
+                         if m['unlock_level'] <= character['level'] and m['name'] not in active_moves_names]
+
+        # Check if move_identifier is a key number
         move_data = None
-        if move_name.isdigit():
-            move_key = int(move_name)
-            # Get available moves (unlocked special moves not in moveset)
-            current_moveset = character.get('moveset', [None, None, None, None])
-            active_moves_names = [move for move in current_moveset if move is not None]
-            available_moves = [m for m in all_special_moves 
-                             if m['unlock_level'] <= character['level'] and m['name'] not in active_moves_names]
+        if move_identifier.isdigit():
+            move_key = int(move_identifier)
             
             if 1 <= move_key <= len(available_moves):
                 move_data = available_moves[move_key - 1]
             else:
-                await ctx.send(f"❌ **Invalid move key '{move_key}'!** Use `!learn` to see available moves and their keys.")
+                await ctx.send(f"❌ **Invalid move key '{move_key}'!** Available keys: 1-{len(available_moves)}. Use `!learn` to see available moves.")
                 return
         else:
             # Find the move by name
             for move_list in [common_physical, common_special, all_special_moves]:
-                move_data = next((m for m in move_list if m['name'].lower() == move_name.lower()), None)
+                move_data = next((m for m in move_list if m['name'].lower() == move_identifier.lower()), None)
                 if move_data:
                     break
 
         if not move_data:
-            await ctx.send(f"❌ **Move '{move_name}' not found!** Use `!learn` to see available moves.")
+            await ctx.send(f"❌ **Move '{move_identifier}' not found!** Use `!learn` to see available moves and keys.")
             return
 
         # Check if it's a special move that requires unlocking
@@ -952,7 +957,6 @@ class CharacterManagement(commands.Cog, name="Player Commands"):
             return
 
         # Check if move is already known
-        current_moveset = character.get('moveset', [None, None, None, None])
         if move_data['name'] in current_moveset:
             await ctx.send(f"❌ **{character['name']}** already knows **{move_data['name']}**!")
             return
