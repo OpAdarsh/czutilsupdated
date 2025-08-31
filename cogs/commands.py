@@ -1180,8 +1180,7 @@ class CharacterManagement(commands.Cog, name="Player Commands"):
             except Exception as e:
                 print(f"Could not DM user about learned moves: {e}")
 
-
-@commands.command(name='leaderboard', aliases=['lb'], help="!leaderboard - Shows the top ranked players.", category="Info")
+    @commands.command(name='leaderboard', aliases=['lb'], help="!leaderboard - Shows the top ranked players.", category="Info")
     @has_accepted_rules()
     async def leaderboard(self, ctx):
         """Display the leaderboard of top ranked players."""

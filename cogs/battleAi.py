@@ -485,7 +485,7 @@ class BattleAI(commands.Cog, name="AI Battle"):
             embed.set_footer(text=footer_text)
         return embed
 
-def get_player_rank(self, rank_points):
+    def get_player_rank(self, rank_points):
         """Returns the player's current rank tier based on rank points."""
         for rank_name, rank_data in self.ranks['tiers'].items():
             if rank_data['min_rp'] <= rank_points <= rank_data['max_rp']:
