@@ -49,10 +49,24 @@ class BattleAI(commands.Cog, name="AI Battle"):
     def get_character_attacks(self, character):
         """Fetches the list of available attacks for a character instance."""
         active_moves = character.get('moveset', [])
-        # Filter out None values from moveset
+        # Filter out None values from moveset and ensure we have at least some moves
         active_moves = [move for move in active_moves if move is not None]
-        all_possible_moves = self.attacks.get('physical', []) + self.attacks.get('special', []) + self.attacks.get('characters', {}).get(str(character.get('id')), [])
-        return [m for m in all_possible_moves if m['name'] in active_moves]
+        
+        # Get all possible moves
+        physical_moves = self.attacks.get('physical', [])
+        special_moves = self.attacks.get('special', [])
+        character_moves = self.attacks.get('characters', {}).get(str(character.get('id', character.get('name', ''))), [])
+        
+        all_possible_moves = physical_moves + special_moves + character_moves
+        
+        # Get available attacks
+        available_attacks = [m for m in all_possible_moves if m['name'] in active_moves]
+        
+        # Fallback to basic attacks if no moves found
+        if not available_attacks and physical_moves:
+            available_attacks = [physical_moves[0]]  # Use first basic attack as fallback
+            
+        return available_attacks
 
     # --- Battle UI Components (Copied from rpg.py for consistency) ---
     class BattleView(discord.ui.View):
@@ -121,7 +135,20 @@ class BattleAI(commands.Cog, name="AI Battle"):
         avg_level = max(1, sum(team_levels) // len(team_levels)) if team_levels else 1
         
         bot_team_chars = random.sample(list(self.characters.items()), 3)
-        bot_team = [stats_cog._scale_character_to_level({"name": name, **data}, avg_level) for name, data in bot_team_chars]
+        bot_team = []
+        for name, data in bot_team_chars:
+            scaled_char = stats_cog._scale_character_to_level({"name": name, **data}, avg_level)
+            
+            # Ensure bot characters have movesets
+            if not scaled_char.get('moveset') or not any(move for move in scaled_char.get('moveset', []) if move is not None):
+                # Give them basic physical attacks
+                basic_moves = self.attacks.get('physical', [])
+                if basic_moves:
+                    scaled_char['moveset'] = [basic_moves[0]['name'], None, None, None]
+                    if len(basic_moves) > 1:
+                        scaled_char['moveset'][1] = basic_moves[1]['name']
+            
+            bot_team.append(scaled_char)
 
         await self._run_ai_battle(ctx, challenger, player_data, bot_team)
 
@@ -159,6 +186,14 @@ class BattleAI(commands.Cog, name="AI Battle"):
                         inst = player_data['characters'][char_id].copy()
                         inst['stats'] = stats_cog.get_character_display_stats(inst)
                         inst['current_hp'] = inst['stats']['HP']
+                        
+                        # Ensure character has a proper moveset for battle
+                        if not inst.get('moveset') or not any(move for move in inst.get('moveset', []) if move is not None):
+                            # Give basic moves if character has none
+                            basic_moves = self.attacks.get('physical', [])
+                            if basic_moves:
+                                inst['moveset'] = [basic_moves[0]['name'], None, None, None]
+                        
                         team.append(inst)
                 return team
 
@@ -176,7 +211,14 @@ class BattleAI(commands.Cog, name="AI Battle"):
                 user_action = await self._get_player_move(ctx, user, user_active_char)
                 
                 bot_attacks = self.get_character_attacks(bot_active_char)
-                bot_action = max(bot_attacks, key=lambda m: m.get('power', 0))
+                if not bot_attacks:
+                    # Fallback to basic attack if no moves available
+                    bot_attacks = self.attacks.get('physical', [])
+                    if not bot_attacks:
+                        log.append("❌ Bot has no available attacks - skipping turn")
+                        continue
+                        
+                bot_action = max(bot_attacks, key=lambda m: m.get('power', 0)) if bot_attacks else None
                 
                 actions = [
                     {'user': user, 'attack': user_action, 'active': user_active_char, 'target': bot_active_char},

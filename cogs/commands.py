@@ -791,6 +791,8 @@ class CharacterManagement(commands.Cog, name="Player Commands"):
             await ctx.send("❌ Invalid format. Use:\n• `!learn <move_name>`\n• `!learn <character>, <move_name>`\n• `!learn <character>, <slot 1-4>, <move_name>`")
             return
 
+        # Ensure char_id is integer for consistency
+        char_id = int(char_id)
         character = player['characters'][char_id]
         
         # Get all available moves for this character
