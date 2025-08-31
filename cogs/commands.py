@@ -688,24 +688,98 @@ class CharacterManagement(commands.Cog, name="Player Commands"):
         db.update_player(ctx.author.id, player)
         await ctx.send(f"Swapped **{old_move_name}** for **{new_move_data['name']}** on {character['name']}!")
 
-    @commands.command(name='learn', help="!learn <move_name> OR !learn <id_or_name>, <move_name> - Teaches a move to a character.", category="Team Management")
+    class SlotSelectionView(discord.ui.View):
+        def __init__(self, ctx, character, move_data, current_moveset, player):
+            super().__init__(timeout=60.0)
+            self.ctx = ctx
+            self.character = character
+            self.move_data = move_data
+            self.current_moveset = current_moveset
+            self.player = player
+            self.char_id = None
+            
+            # Find character ID
+            for cid, char in player['characters'].items():
+                if char == character:
+                    self.char_id = cid
+                    break
+            
+            # Create buttons for each slot
+            for i in range(4):
+                current_move = current_moveset[i] if current_moveset[i] else "Empty"
+                button = discord.ui.Button(
+                    label=f"Slot {i+1}: {current_move}",
+                    style=discord.ButtonStyle.secondary if current_moveset[i] else discord.ButtonStyle.success,
+                    custom_id=f"slot_{i}"
+                )
+                button.callback = self.create_slot_callback(i)
+                self.add_item(button)
+        
+        def create_slot_callback(self, slot_index):
+            async def slot_callback(interaction: discord.Interaction):
+                if interaction.user.id != self.ctx.author.id:
+                    await interaction.response.send_message("❌ This isn't your learn command!", ephemeral=True)
+                    return
+                
+                old_move = self.current_moveset[slot_index] if self.current_moveset[slot_index] else "Empty Slot"
+                self.current_moveset[slot_index] = self.move_data['name']
+                self.character['moveset'] = self.current_moveset
+                
+                # Update database
+                db.update_player(self.ctx.author.id, self.player)
+                
+                if old_move == "Empty Slot":
+                    response = f"✅ **{self.character['name']}** learned **{self.move_data['name']}** in slot {slot_index + 1}!"
+                else:
+                    response = f"✅ **{self.character['name']}** forgot **{old_move}** and learned **{self.move_data['name']}** in slot {slot_index + 1}!"
+                
+                await interaction.response.edit_message(content=response, embed=None, view=None)
+                self.stop()
+            
+            return slot_callback
+        
+        async def on_timeout(self):
+            try:
+                await self.message.edit(content="⏰ Move learning timed out. Try again when you're ready.", embed=None, view=None)
+            except:
+                pass
+
+    @commands.command(name='learn', help="!learn <move_name> OR !learn <character>, <move_name> OR !learn <character>, <slot>, <move_name> - Teaches a move to a character.", category="Team Management")
     @has_accepted_rules()
     async def learn_move(self, ctx, *, arguments: str):
         player = db.get_player(ctx.author.id)
         
-        # Check if arguments contain a comma (old format)
-        if ',' in arguments:
+        # Parse arguments - support multiple formats
+        parts = [arg.strip() for arg in arguments.split(',')]
+        
+        if len(parts) == 3:
+            # Format: !learn <character>, <slot>, <move_name>
+            identifier, slot_str, move_name = parts
             try:
-                identifier, move_name = [arg.strip() for arg in arguments.split(',', 1)]
-                char_id = await self._find_character_from_input(ctx, player, identifier)
-                if char_id is None:
+                target_slot = int(slot_str) - 1  # Convert to 0-based index
+                if target_slot < 0 or target_slot > 3:
+                    await ctx.send("❌ Slot must be between 1-4!")
                     return
             except ValueError:
-                await ctx.send("Invalid format. Use: `!learn <move_name>` or `!learn <character>, <move_name>`")
+                await ctx.send("❌ Invalid slot number. Use: `!learn <character>, <slot 1-4>, <move_name>`")
                 return
-        else:
-            # New simplified format - use selected character
-            move_name = arguments.strip()
+            
+            char_id = await self._find_character_from_input(ctx, player, identifier)
+            if char_id is None:
+                return
+                
+        elif len(parts) == 2:
+            # Format: !learn <character>, <move_name>
+            identifier, move_name = parts
+            target_slot = None
+            char_id = await self._find_character_from_input(ctx, player, identifier)
+            if char_id is None:
+                return
+                
+        elif len(parts) == 1:
+            # Format: !learn <move_name> (use selected character)
+            move_name = parts[0]
+            target_slot = None
             char_id = player.get('selected_character_id')
             if not char_id:
                 await ctx.send("❌ No character selected! Use `!select <character>` first, or use `!learn <character>, <move_name>`")
@@ -713,6 +787,9 @@ class CharacterManagement(commands.Cog, name="Player Commands"):
             if char_id not in player['characters']:
                 await ctx.send("❌ Your selected character no longer exists! Please select a new one.")
                 return
+        else:
+            await ctx.send("❌ Invalid format. Use:\n• `!learn <move_name>`\n• `!learn <character>, <move_name>`\n• `!learn <character>, <slot 1-4>, <move_name>`")
+            return
 
         character = player['characters'][char_id]
         
@@ -743,7 +820,20 @@ class CharacterManagement(commands.Cog, name="Player Commands"):
             await ctx.send(f"❌ **{character['name']}** already knows **{move_data['name']}**!")
             return
         
-        # Find first empty slot or ask which slot to replace
+        # If specific slot was requested
+        if target_slot is not None:
+            old_move = current_moveset[target_slot] if current_moveset[target_slot] else "Empty Slot"
+            current_moveset[target_slot] = move_data['name']
+            character['moveset'] = current_moveset
+            db.update_player(ctx.author.id, player)
+            
+            if old_move == "Empty Slot":
+                await ctx.send(f"✅ **{character['name']}** learned **{move_data['name']}** in slot {target_slot + 1}!")
+            else:
+                await ctx.send(f"✅ **{character['name']}** forgot **{old_move}** and learned **{move_data['name']}** in slot {target_slot + 1}!")
+            return
+        
+        # Find first empty slot or use UI for selection
         empty_slot = None
         for i, move in enumerate(current_moveset):
             if move is None:
@@ -757,40 +847,49 @@ class CharacterManagement(commands.Cog, name="Player Commands"):
             db.update_player(ctx.author.id, player)
             await ctx.send(f"✅ **{character['name']}** learned **{move_data['name']}** in slot {empty_slot + 1}!")
         else:
-            # All slots full, show current moveset and ask for replacement
-            moveset_display = "\n".join([f"**{i+1}.** {move}" for i, move in enumerate(current_moveset)])
+            # All slots full, show slot selection UI
             embed = discord.Embed(
-                title=f"{character['name']}'s Moveset is Full!",
-                description=f"Current moves:\n{moveset_display}\n\nWhich move slot (1-4) should **{move_data['name']}** replace?",
+                title=f"🎯 Learn Move: {move_data['name']}",
+                description=f"**{character['name']}'s** moveset is full! Choose which slot to replace:",
                 color=discord.Color.orange()
             )
             
-            message = await ctx.send(embed=embed)
+            # Show current moveset with move details
+            moveset_info = []
+            for i, move in enumerate(current_moveset):
+                if move:
+                    # Find move data for details
+                    move_info = None
+                    for move_list in [common_physical, common_special, all_special_moves]:
+                        move_info = next((m for m in move_list if m['name'] == move), None)
+                        if move_info:
+                            break
+                    
+                    if move_info:
+                        power = move_info.get('power', 0)
+                        accuracy = move_info.get('accuracy', 100)
+                        move_type = move_info.get('type', 'Normal')
+                        moveset_info.append(f"**{i+1}.** {move} - Power: {power}, Acc: {accuracy}%, Type: {move_type}")
+                    else:
+                        moveset_info.append(f"**{i+1}.** {move}")
+                else:
+                    moveset_info.append(f"**{i+1}.** *Empty*")
             
-            # Add number reactions
-            reactions = ['1️⃣', '2️⃣', '3️⃣', '4️⃣']
-            for reaction in reactions:
-                await message.add_reaction(reaction)
+            embed.add_field(name="Current Moveset", value="\n".join(moveset_info), inline=False)
             
-            def check(reaction, user):
-                return (user == ctx.author and 
-                       str(reaction.emoji) in reactions and 
-                       reaction.message.id == message.id)
+            # Show new move details
+            new_move_power = move_data.get('power', 0)
+            new_move_acc = move_data.get('accuracy', 100)
+            new_move_type = move_data.get('type', 'Normal')
+            embed.add_field(
+                name="New Move", 
+                value=f"**{move_data['name']}** - Power: {new_move_power}, Acc: {new_move_acc}%, Type: {new_move_type}", 
+                inline=False
+            )
             
-            try:
-                reaction, user = await self.bot.wait_for('reaction_add', timeout=30.0, check=check)
-                slot_index = reactions.index(str(reaction.emoji))
-                old_move = current_moveset[slot_index]
-                current_moveset[slot_index] = move_data['name']
-                character['moveset'] = current_moveset
-                db.update_player(ctx.author.id, player)
-                
-                await message.delete()
-                await ctx.send(f"✅ **{character['name']}** forgot **{old_move}** and learned **{move_data['name']}** in slot {slot_index + 1}!")
-                
-            except asyncio.TimeoutError:
-                await message.delete()
-                await ctx.send("⏰ Move learning timed out. Try again when you're ready.")
+            view = self.SlotSelectionView(ctx, character, move_data, current_moveset, player)
+            message = await ctx.send(embed=embed, view=view)
+            view.message = message
 
 async def setup(bot):
     await bot.add_cog(CharacterManagement(bot))
