@@ -485,9 +485,6 @@ class BattleAI(commands.Cog, name="AI Battle"):
             embed.set_footer(text=footer_text)
         return embed
 
-async def setup(bot):
-    await bot.add_cog(BattleAI(bot))
-
 def get_player_rank(self, rank_points):
         """Returns the player's current rank tier based on rank points."""
         for rank_name, rank_data in self.ranks['tiers'].items():
@@ -512,3 +509,6 @@ def get_player_rank(self, rank_points):
             if loser_rp > winner_rp + 500:
                 base_rp = max(-5, base_rp + 5)
             return base_rp
+
+async def setup(bot):
+    await bot.add_cog(BattleAI(bot))

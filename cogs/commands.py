@@ -1034,142 +1034,9 @@ class CharacterManagement(commands.Cog, name="Player Commands"):
             message = await ctx.send(embed=embed, view=view)
             view.message = message
 
-    @commands.command(name='shop', help="!shop - Displays the in-game shop.", category="Economy")
-    @has_accepted_rules()
-    async def shop(self, ctx):
-        player = db.get_player(ctx.author.id)
-        embed = discord.Embed(title="🛒 The General Store", color=discord.Color.blue())
+    
 
-        shop_items = {
-            "Consumables": [
-                {"name": "XP Booster (1h)", "price": 40, "description": "+100% XP for 1 hour"},
-                {"name": "XP Booster (6h)", "price": 80, "description": "+100% XP for 6 hours"},
-                {"name": "XP Booster (12h)", "price": 100, "description": "+100% XP for 12 hours"},
-                {"name": "Level Potion", "price": 100, "description": "Instantly gain 1-3 levels (1 for higher levels)."},
-                {"name": "🎟️ Pull Ticket", "price": 250, "description": "Bypass the cooldown for !pull."},
-                {"name": "Battle Pass", "price": 500, "description": "Grants access to exclusive rewards and faster progression."},
-            ],
-            "Permanent": [
-                {"name": "Inventory Slot", "price": 750, "description": "Increases your character inventory limit by 5."},
-                {"name": "Team Slot", "price": 1000, "description": "Unlocks an additional team slot (max 5)."},
-            ]
-        }
-
-        for category, items in shop_items.items():
-            item_text = ""
-            for item in items:
-                item_text += f"**{item['name']}** - {item['price']} Coins\n"
-                item_text += f"  *({item['description']})*\n"
-            embed.add_field(name=f"**{category}**", value=item_text, inline=False)
-
-        embed.set_footer(text=f"Your balance: {player['coins']} Coins")
-        await ctx.send(embed=embed)
-
-    @commands.command(name='buy', help="!buy <item_name> - Purchases an item from the shop.", category="Economy")
-    @has_accepted_rules()
-    async def buy(self, ctx, *, item_name: str):
-        player = db.get_player(ctx.author.id)
-        item_name_lower = item_name.lower()
-
-        shop_items_flat = {}
-        shop_items_data = {
-            "Consumables": [
-                {"name": "XP Booster (1h)", "price": 40, "description": "+100% XP for 1 hour", "effect": "xp_booster", "duration": 3600},
-                {"name": "XP Booster (6h)", "price": 80, "description": "+100% XP for 6 hours", "effect": "xp_booster", "duration": 21600},
-                {"name": "XP Booster (12h)", "price": 100, "description": "+100% XP for 12 hours", "effect": "xp_booster", "duration": 43200},
-                {"name": "Level Potion", "price": 100, "description": "Instantly gain 1-3 levels (1 for higher levels).", "effect": "level_potion"},
-                {"name": "🎟️ Pull Ticket", "price": 250, "description": "Bypass the cooldown for !pull.", "effect": "pull_ticket"},
-                {"name": "Battle Pass", "price": 500, "description": "Grants access to exclusive rewards and faster progression.", "effect": "battle_pass"},
-            ],
-            "Permanent": [
-                {"name": "Inventory Slot", "price": 750, "description": "Increases your character inventory limit by 5.", "effect": "inventory_slot"},
-                {"name": "Team Slot", "price": 1000, "description": "Unlocks an additional team slot (max 5).", "effect": "team_slot"},
-            ]
-        }
-        for category, items in shop_items_data.items():
-            for item in items:
-                shop_items_flat[item['name'].lower()] = item
-
-        item_to_buy = shop_items_flat.get(item_name_lower)
-
-        if not item_to_buy:
-            await ctx.send(f"❌ **Item '{item_name}' not found in the shop.** Use `!shop` to see available items."); return
-
-        if player['coins'] < item_to_buy['price']:
-            await ctx.send(f"❌ You don't have enough coins! You need {item_to_buy['price']} but only have {player['coins']}."); return
-
-        # Process purchase
-        player['coins'] -= item_to_buy['price']
-
-        if item_to_buy['effect'] == "xp_booster":
-            # Find selected character
-            selected_char_id = player.get('selected_character_id')
-            if not selected_char_id:
-                await ctx.send("❌ **You must select a character first** with `!select <character>` to apply the XP Booster."); return
-
-            # Ensure 'xp_booster' key exists and is a dictionary
-            if 'xp_booster' not in player or not isinstance(player['xp_booster'], dict):
-                player['xp_booster'] = {}
-
-            # Set booster expiry time (current time + duration)
-            player['xp_booster'][str(selected_char_id)] = time.time() + item_to_buy['duration']
-            await ctx.send(f"✅ **XP Booster ({item_to_buy['description']})** activated for your selected character!")
-
-        elif item_to_buy['effect'] == "level_potion":
-            selected_char_id = player.get('selected_character_id')
-            if not selected_char_id:
-                await ctx.send("❌ **You must select a character first** with `!select <character>` to use the Level Potion."); return
-
-            character = player['characters'][selected_char_id]
-            current_level = character['level']
-            levels_to_gain = 0
-
-            # Determine levels to gain based on current level
-            if current_level < 20:
-                levels_to_gain = random.randint(1, 3)
-            elif current_level < 50:
-                levels_to_gain = random.randint(1, 2)
-            else:
-                levels_to_gain = 1
-
-            # Ensure we don't exceed max level (if defined, otherwise assume no limit for now)
-            # max_level = 100 # Example: If max level is 100
-            # levels_to_gain = min(levels_to_gain, max_level - current_level)
-
-            if levels_to_gain > 0:
-                character['level'] += levels_to_gain
-                # Recalculate stats based on new level
-                stats_cog = self.bot.get_cog('Stat Calculations')
-                if stats_cog:
-                    base_stats = {k: v for k, v in self.characters[character['name']].items() if k in ['HP', 'ATK', 'DEF', 'SPD', 'SP_ATK', 'SP_DEF']}
-                    character['stats'] = stats_cog._calculate_stats(base_stats, character['individual_ivs'], character['level'])
-                await ctx.send(f"✅ **Level Potion** used! Your character, **{character['name']}**, gained **{levels_to_gain}** level(s) and is now Level {character['level']}!")
-            else:
-                await ctx.send("✅ Your character is already at a high level, so the Level Potion had no effect.")
-
-        elif item_to_buy['effect'] == "pull_ticket":
-            player['inventory']['🎟️ Pull Ticket'] = player['inventory'].get('🎟️ Pull Ticket', 0) + 1
-            await ctx.send(f"✅ Added **🎟️ Pull Ticket** to your inventory.")
-
-        elif item_to_buy['effect'] == "battle_pass":
-            # Logic for Battle Pass purchase would go here
-            # This might involve adding a flag to the player, or granting access to a separate system.
-            await ctx.send(f"✅ **Battle Pass** purchased! You now have access to exclusive rewards.")
-
-        elif item_to_buy['effect'] == "inventory_slot":
-            player['inventory_slots'] = player.get('inventory_slots', 20) + 5 # Assuming a default of 20 slots
-            await ctx.send(f"✅ **Inventory Slot** purchased! Your inventory limit has increased.")
-
-        elif item_to_buy['effect'] == "team_slot":
-            player['team_slots'] = player.get('team_slots', 3) + 1 # Assuming a default of 3 slots
-            await ctx.send(f"✅ **Team Slot** purchased! You have unlocked an additional team slot.")
-
-        else:
-            # Default handling for items that might just be added to inventory
-            player['inventory'][item_to_buy['name']] = player['inventory'].get(item_to_buy['name'], 0) + 1
-            await ctx.send(f"✅ Purchased **{item_to_buy['name']}**. Added to your inventory.")
-
-        db.update_player(ctx.author.id, player)
+    
 
     # --- Placeholder for Core Gameplay Cog ---
     # This section is a placeholder and assumes the existence of a 'Core Gameplay' cog
@@ -1314,10 +1181,7 @@ class CharacterManagement(commands.Cog, name="Player Commands"):
                 print(f"Could not DM user about learned moves: {e}")
 
 
-async def setup(bot):
-    await bot.add_cog(CharacterManagement(bot))
-
-    @commands.command(name='leaderboard', aliases=['lb'], help="!leaderboard - Shows the top ranked players.", category="Info")
+@commands.command(name='leaderboard', aliases=['lb'], help="!leaderboard - Shows the top ranked players.", category="Info")
     @has_accepted_rules()
     async def leaderboard(self, ctx):
         """Display the leaderboard of top ranked players."""
@@ -1394,7 +1258,10 @@ async def setup(bot):
                 leaderboard_text += f"📍 {user_badge} **{ctx.author.display_name}**\n"
                 leaderboard_text += f"     `{user_rp} RP • {user_rank}`"
 
-        embed.description = f"```{leaderboard_text}```"
+        embed.description = leaderboard_text
         embed.set_footer(text="Battle AI opponents to earn Rank Points!")
 
         await ctx.send(embed=embed)
+
+async def setup(bot):
+    await bot.add_cog(CharacterManagement(bot))
