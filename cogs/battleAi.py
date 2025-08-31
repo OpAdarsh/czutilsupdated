@@ -68,6 +68,93 @@ class BattleAI(commands.Cog, name="AI Battle"):
             
         return available_attacks
 
+    def _generate_ai_moveset(self, character, character_name):
+        """Generates an optimal moveset for AI characters based on their level."""
+        # Get all available moves for this character
+        basic_physical = self.attacks.get('physical', [])
+        basic_special = self.attacks.get('special', [])
+        character_moves = self.attacks.get('characters', {}).get(character_name, [])
+        
+        # Start with a basic moveset
+        moveset = [None, None, None, None]
+        
+        # Always give at least one basic physical attack
+        if basic_physical:
+            moveset[0] = basic_physical[0]['name']
+        
+        # Add character-specific moves based on level
+        unlocked_moves = [m for m in character_moves if m.get('unlock_level', 1) <= character['level']]
+        
+        if unlocked_moves:
+            # Sort moves by power and unlock level for optimal selection
+            unlocked_moves.sort(key=lambda m: (m.get('power', 0), m.get('unlock_level', 1)), reverse=True)
+            
+            # Fill remaining slots with best available moves
+            slot_index = 1
+            for move in unlocked_moves:
+                if slot_index >= 4:
+                    break
+                if move['name'] not in moveset:
+                    moveset[slot_index] = move['name']
+                    slot_index += 1
+        
+        # Fill any remaining empty slots with basic attacks
+        if len(basic_physical) > 1 and moveset[1] is None:
+            moveset[1] = basic_physical[1]['name'] if len(basic_physical) > 1 else basic_physical[0]['name']
+        
+        if basic_special and moveset[2] is None:
+            moveset[2] = basic_special[0]['name']
+        
+        # If still empty slots, add more basic moves
+        if moveset[3] is None and len(basic_physical) > 2:
+            moveset[3] = basic_physical[2]['name']
+        elif moveset[3] is None and len(basic_special) > 1:
+            moveset[3] = basic_special[1]['name']
+        
+        return moveset
+
+    def _select_ai_move(self, ai_char, target_char, available_attacks):
+        """Selects the best move for AI based on battle situation."""
+        if not available_attacks:
+            return None
+        
+        # Calculate effectiveness for each move
+        move_scores = []
+        ai_hp_percent = ai_char['current_hp'] / ai_char['stats']['HP']
+        target_hp_percent = target_char['current_hp'] / target_char['stats']['HP']
+        
+        for move in available_attacks:
+            score = move.get('power', 0)
+            
+            # Bonus for high accuracy moves
+            accuracy = move.get('accuracy', 100)
+            score += (accuracy - 85) * 0.5  # Bonus for >85% accuracy
+            
+            # Prefer powerful moves when enemy is low on HP
+            if target_hp_percent < 0.3:
+                score += move.get('power', 0) * 0.5
+            
+            # Prefer defensive/healing moves when AI is low on HP
+            if ai_hp_percent < 0.4:
+                if 'heal' in move.get('name', '').lower() or move.get('type') == 'heal':
+                    score += 50
+                elif move.get('power', 0) < 60:  # Prefer safer moves when low
+                    score += 20
+            
+            # Type effectiveness consideration (basic)
+            move_type = move.get('type', '').lower()
+            if move_type in ['fire', 'water', 'electric', 'psychic']:
+                score += 10  # Slight bonus for elemental moves
+            
+            # Add some randomness to prevent predictability
+            score += random.randint(-10, 10)
+            
+            move_scores.append((move, score))
+        
+        # Select the highest scoring move
+        best_move = max(move_scores, key=lambda x: x[1])[0]
+        return best_move
+
     # --- Battle UI Components (Copied from rpg.py for consistency) ---
     class BattleView(discord.ui.View):
         def __init__(self, author, available_attacks):
@@ -139,14 +226,8 @@ class BattleAI(commands.Cog, name="AI Battle"):
         for name, data in bot_team_chars:
             scaled_char = stats_cog._scale_character_to_level({"name": name, **data}, avg_level)
             
-            # Ensure bot characters have movesets
-            if not scaled_char.get('moveset') or not any(move for move in scaled_char.get('moveset', []) if move is not None):
-                # Give them basic physical attacks
-                basic_moves = self.attacks.get('physical', [])
-                if basic_moves:
-                    scaled_char['moveset'] = [basic_moves[0]['name'], None, None, None]
-                    if len(basic_moves) > 1:
-                        scaled_char['moveset'][1] = basic_moves[1]['name']
+            # Advanced AI moveset learning - give them optimal movesets based on their level
+            scaled_char['moveset'] = self._generate_ai_moveset(scaled_char, name)
             
             bot_team.append(scaled_char)
 
@@ -217,8 +298,9 @@ class BattleAI(commands.Cog, name="AI Battle"):
                     if not bot_attacks:
                         log.append("❌ Bot has no available attacks - skipping turn")
                         continue
-                        
-                bot_action = max(bot_attacks, key=lambda m: m.get('power', 0)) if bot_attacks else None
+                
+                # Smart AI move selection based on situation
+                bot_action = self._select_ai_move(bot_active_char, user_active_char, bot_attacks)
                 
                 actions = [
                     {'user': user, 'attack': user_action, 'active': user_active_char, 'target': bot_active_char},
