@@ -32,7 +32,11 @@ def has_accepted_rules():
             return True
 
         cog = ctx.bot.get_cog('Core Gameplay')
-        if not cog or ctx.author.id in cog.rules_prompts.values():
+        if not cog:
+            return False
+        
+        # Check if user already has a pending rules prompt
+        if ctx.author.id in cog.rules_prompts.values():
             return False
 
         embed = discord.Embed(
@@ -72,6 +76,7 @@ class CZ(commands.Cog, name="Core Gameplay"):
         self.attacks = load_json_data('attacks.json')
         self.active_battles = {}
         self.rules_prompts = {}
+        # Initialize database first
         db.init_db()
 
     @commands.Cog.listener()
@@ -189,7 +194,7 @@ class CZ(commands.Cog, name="Core Gameplay"):
             await interaction.response.send_message("You have declined to end the battle.", ephemeral=True)
             self.stop()
 
-    @commands.command(name='battle', help="!battle <member> - Challenge another player to a battle.", category="Battle")
+    @commands.command(name='battle', help="!battle <member> - Challenge another player to a battle.", category="Battle System")
     @has_accepted_rules()
     async def battle(self, ctx, opponent: discord.Member):
         challenger = ctx.author
@@ -378,7 +383,7 @@ class CZ(commands.Cog, name="Core Gameplay"):
             embed.set_footer(text=footer_text)
         return embed
         
-    @commands.command(name='battleend', help="!battleend - Propose to end the current battle.", category="Battle")
+    @commands.command(name='battleend', help="!battleend - Propose to end the current battle.", category="Battle System")
     async def battle_end(self, ctx):
         battle_key = None
         opponent = None
