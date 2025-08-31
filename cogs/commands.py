@@ -307,14 +307,21 @@ class CharacterManagement(commands.Cog, name="Player Commands"):
 
     @commands.command(name='info', aliases=['i'], help="!info [latest|id_or_name] - Shows info for a character.", category="Player Info")
     @has_accepted_rules()
-    async def info(self, ctx, *, identifier: str = "latest"):
+    async def info(self, ctx, *, identifier: str = None):
         stats_cog = self.bot.get_cog('Stat Calculations')
         cz_cog = self.bot.get_cog('Core Gameplay')
         if not stats_cog or not cz_cog:
             await ctx.send("Game systems are currently offline."); return
 
         player = db.get_player(ctx.author.id)
-        if identifier.lower() == 'latest':
+        
+        # If no identifier provided, show selected character
+        if identifier is None:
+            char_id = player.get('selected_character_id')
+            if char_id is None:
+                await ctx.send("❌ **No character selected!** Use `!select <character_id>` to select a character first, or use `!info latest` to see your latest pull.")
+                return
+        elif identifier.lower() == 'latest':
             char_id = player.get('latest_pull_id')
             if char_id is None:
                 await ctx.send("You haven't pulled any characters yet."); return
@@ -325,7 +332,15 @@ class CharacterManagement(commands.Cog, name="Player Commands"):
         char = player['characters'][char_id]
         display_stats = stats_cog.get_character_display_stats(char)
 
-        embed = discord.Embed(title=f"{char['name']} (ID: {char_id}, IV: {char['iv']}%)", description=char['description'], color=discord.Color.blue())
+        # Check if this is the selected character
+        is_selected = char_id == player.get('selected_character_id')
+        selected_indicator = " ⭐" if is_selected else ""
+        
+        embed = discord.Embed(
+            title=f"{char['name']} (ID: {char_id}, IV: {char['iv']}%){selected_indicator}", 
+            description=char['description'], 
+            color=discord.Color.gold() if is_selected else discord.Color.blue()
+        )
         xp_needed = cz_cog._get_xp_for_next_level(char['level'])
 
         stats_text = f"**Lvl:** {char['level']} ({char['xp']}/{xp_needed} XP)\n"
@@ -336,7 +351,12 @@ class CharacterManagement(commands.Cog, name="Player Commands"):
         embed.add_field(name="Stats", value=stats_text, inline=False)
         embed.add_field(name="Ability", value=char['ability'], inline=True)
         embed.add_field(name="Equipped", value=char.get('equipped_item', "None"), inline=True)
-        embed.set_footer(text=f"Total IV: {char['iv']}%")
+        
+        if is_selected:
+            embed.set_footer(text=f"Total IV: {char['iv']}% • Selected Character - Gains XP as you chat!")
+        else:
+            embed.set_footer(text=f"Total IV: {char['iv']}%")
+            
         await ctx.send(embed=embed)
 
     @commands.command(name='infolatest', aliases=['il'], help="!infolatest - Shows info for your latest pulled character.", category="Player Info")
@@ -721,12 +741,14 @@ class CharacterManagement(commands.Cog, name="Player Commands"):
 
         embed.add_field(name="⚔️ Active Moveset", value="\n".join(moveset_display), inline=False)
 
-        # Show available moves to learn
+        # Show available moves to learn with keys
         active_moves_names = [move for move in current_moveset if move is not None]
         available_moves = []
+        move_key = 1
         for move in all_special_moves:
             if move['unlock_level'] <= character['level'] and move['name'] not in active_moves_names:
-                available_moves.append(f"**{move['name']}** - PWR: {move.get('power', 0)}, ACC: {move.get('accuracy', 100)}%")
+                available_moves.append(f"`{move_key}` **{move['name']}** - PWR: {move.get('power', 0)}, ACC: {move.get('accuracy', 100)}%")
+                move_key += 1
 
         if available_moves:
             embed.add_field(
@@ -748,7 +770,7 @@ class CharacterManagement(commands.Cog, name="Player Commands"):
                 inline=False
             )
 
-        embed.set_footer(text="Use !learn <move_name> [position] to teach a move")
+        embed.set_footer(text="Use !learn <move_name> [position] or !learn <key> [position] to teach a move")
         await ctx.send(embed=embed)
 
     @moves.command(name='swap', help="!moves swap <id_or_name>, <new>, <old> - Swaps moves.", category="Team Management")
@@ -898,15 +920,30 @@ class CharacterManagement(commands.Cog, name="Player Commands"):
         common_physical = self.attacks.get('physical', [])
         common_special = self.attacks.get('special', [])
 
-        # Find the move
+        # Check if move_name is a key number
         move_data = None
-        for move_list in [common_physical, common_special, all_special_moves]:
-            move_data = next((m for m in move_list if m['name'].lower() == move_name.lower()), None)
-            if move_data:
-                break
+        if move_name.isdigit():
+            move_key = int(move_name)
+            # Get available moves (unlocked special moves not in moveset)
+            current_moveset = character.get('moveset', [None, None, None, None])
+            active_moves_names = [move for move in current_moveset if move is not None]
+            available_moves = [m for m in all_special_moves 
+                             if m['unlock_level'] <= character['level'] and m['name'] not in active_moves_names]
+            
+            if 1 <= move_key <= len(available_moves):
+                move_data = available_moves[move_key - 1]
+            else:
+                await ctx.send(f"❌ **Invalid move key '{move_key}'!** Use `!learn` to see available moves and their keys.")
+                return
+        else:
+            # Find the move by name
+            for move_list in [common_physical, common_special, all_special_moves]:
+                move_data = next((m for m in move_list if m['name'].lower() == move_name.lower()), None)
+                if move_data:
+                    break
 
         if not move_data:
-            await ctx.send(f"❌ **Move '{move_name}' not found!** Use `!moves {character['name']}` to see available moves.")
+            await ctx.send(f"❌ **Move '{move_name}' not found!** Use `!learn` to see available moves.")
             return
 
         # Check if it's a special move that requires unlocking
@@ -987,7 +1024,7 @@ class CharacterManagement(commands.Cog, name="Player Commands"):
                 inline=False
             )
 
-            embed.set_footer(text="You can also use: !learn <move_name> <position 1-4>")
+            embed.set_footer(text="You can also use: !learn <move_name> <position 1-4> or !learn <key> <position>")
 
             view = self.SlotSelectionView(ctx, character, move_data, current_moveset, player)
             message = await ctx.send(embed=embed, view=view)
