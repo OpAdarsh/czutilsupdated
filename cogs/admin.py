@@ -4,6 +4,7 @@ import json
 import os
 import random
 import asyncio
+import requests
 # Import the database functions
 import database as db
 
@@ -11,6 +12,8 @@ class Admin(commands.Cog):
     """A cog for bot administration commands, restricted to the Bot Admin."""
     def __init__(self, bot):
         self.bot = bot
+        self.api_key = os.environ.get('UPTIMEROBOT_API_KEY', '')
+        self.api_url = 'https://api.uptimerobot.com/v2/getMonitors'
 
     # This check runs before any command in this cog is executed.
     async def cog_check(self, ctx):
@@ -85,7 +88,7 @@ class Admin(commands.Cog):
         player['coins'] += amount
         db.update_player(member.id, player)
         await ctx.send(f"✅ Added **{amount}** coins to {member.mention}. Their new balance is **{player['coins']}**.")
-        
+
     @commands.command(name='addchar', help="!addchar <member> <name> - Gives a character to a user.")
     async def add_character(self, ctx, member: discord.Member, *, character_name: str):
         stats_cog = self.bot.get_cog('Stat Calculations')
@@ -93,12 +96,12 @@ class Admin(commands.Cog):
         if not stats_cog or not cz_cog:
             await ctx.send("❌ **Error:** Core cogs are not loaded.")
             return
-            
+
         found_char_name = next((name for name in cz_cog.characters if name.lower() == character_name.lower()), None)
         if not found_char_name:
             await ctx.send(f"❌ **Error:** Character '{character_name}' not found in the game data.")
             return
-            
+
         player = db.get_player(member.id)
         base_char_data = cz_cog.characters[found_char_name]
         new_char_instance = cz_cog._create_character_instance(base_char_data)
@@ -149,7 +152,7 @@ class Admin(commands.Cog):
         character['stats'] = stats_cog._calculate_stats(base_char_data, character['individual_ivs'], 100)
         db.update_player(member.id, player)
         await ctx.send(f"🎉 **Success!** {member.mention}'s **{character['name']}** (ID: {char_id}) has been maxed out to Level 100.")
-    
+
     @commands.command(name='resetplayersdata', aliases=['rpd'], help="!rpd - Wipes all player data.")
     async def reset_players_data(self, ctx):
         await ctx.send(
@@ -167,7 +170,7 @@ class Admin(commands.Cog):
             await ctx.send("Confirmation timed out. Player data reset has been cancelled.")
         except Exception as e:
             await ctx.send(f"An unexpected error occurred while wiping data: `{e}`")
-            
+
     @commands.command(name='clearuserdata', help="!clearuserdata <member> - Clears all data for a user.", category="Admin")
     async def clearuserdata(self, ctx, member: discord.Member):
         if member.id == ctx.author.id:
@@ -189,6 +192,97 @@ class Admin(commands.Cog):
         except Exception as e:
             await ctx.send(f"An unexpected error occurred while wiping data: `{e}`")
 
+    async def get_monitor_data(self):
+        """Fetch monitor data from UptimeRobot API"""
+        if not self.api_key:
+            return {"error": "UptimeRobot API key not configured"}
+
+        try:
+            params = {
+                'api_key': self.api_key,
+                'format': 'json',
+                'logs': '1'
+            }
+
+            response = requests.post(self.api_url, data=params, timeout=10)
+            response.raise_for_status()
+
+            data = response.json()
+
+            if data.get('stat') == 'ok':
+                return data.get('monitors', [])
+            else:
+                return {"error": f"API Error: {data.get('error', 'Unknown error')}"}
+
+        except requests.exceptions.RequestException as e:
+            return {"error": f"Request failed: {str(e)}"}
+        except json.JSONDecodeError:
+            return {"error": "Invalid JSON response"}
+
+    @commands.command(name="status", help="!status - Check if bot is alive")
+    async def get_status(self, ctx):
+        """Check if the bot's web server is alive"""
+
+        import aiohttp
+        import asyncio
+
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get('http://127.0.0.1:5000', timeout=aiohttp.ClientTimeout(total=5)) as response:
+                    if response.status == 200:
+                        await ctx.send("✅ **Bot is ALIVE!**\n✅ Connected and responding")
+                    else:
+                        await ctx.send(f"⚠️ Bot responding but web server returned status {response.status}")
+        except (aiohttp.ClientError, asyncio.TimeoutError):
+            await ctx.send("❌ **Bot web server not responding**\n✅ Discord connection active")
+
+    @commands.command(name="uptime", help="!uptime - Detailed uptime information")
+    async def uptime_details(self, ctx):
+        """Get detailed uptime information"""
+
+        monitor_data = await self.get_monitor_data()
+
+        if isinstance(monitor_data, dict) and "error" in monitor_data:
+            await ctx.send(f"❌ Error: {monitor_data['error']}")
+            return
+
+        if not monitor_data:
+            await ctx.send("⚠️ No monitors found")
+            return
+
+        total_monitors = len(monitor_data)
+        up_monitors = sum(1 for m in monitor_data if m.get('status') == 2)
+        success_rate = (up_monitors/total_monitors*100) if total_monitors > 0 else 0
+
+        await ctx.send(f"**Total Monitors:** {total_monitors}\n**Currently Up:** {up_monitors}\n**Success Rate:** {success_rate:.1f}%")
+
+    @commands.command(name='rmvimage', help="!rmvimage <char_id> - Remove a character image.")
+    async def remove_character_image(self, ctx, char_id: int):
+        """Remove a character image from the images directory"""
+
+        try:
+            images_dir = "data/character_images"
+
+            # Look for any image file with this character ID
+            found_files = []
+            if os.path.exists(images_dir):
+                for filename in os.listdir(images_dir):
+                    if filename.startswith(f"char_{char_id}."):
+                        found_files.append(os.path.join(images_dir, filename))
+
+            if not found_files:
+                await ctx.send(f"❌ No image found for character ID **{char_id}**.")
+                return
+
+            # Remove all found files for this character ID
+            for filepath in found_files:
+                os.remove(filepath)
+
+            file_list = ", ".join([os.path.basename(f) for f in found_files])
+            await ctx.send(f"✅ Successfully removed image(s) for character ID **{char_id}**!\n🗑️ Deleted: `{file_list}`")
+
+        except Exception as e:
+            await ctx.send(f"❌ An error occurred while removing the image: `{str(e)}`")
+
 async def setup(bot):
     await bot.add_cog(Admin(bot))
-
