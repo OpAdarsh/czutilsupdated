@@ -3,6 +3,7 @@ from discord.ext import commands
 import os
 import json
 import asyncio
+import time
 from flask import Flask
 import threading
 
@@ -96,6 +97,21 @@ def alive():
     </html>
     '''
 
+@app.route('/ping')
+def ping():
+    """Simple ping endpoint for UptimeRobot"""
+    return {"status": "alive", "timestamp": time.time()}, 200
+
+@app.route('/health')
+def health():
+    """Detailed health check"""
+    return {
+        "status": "healthy",
+        "bot_connected": bot.is_ready() if bot else False,
+        "uptime": time.time(),
+        "service": "discord_bot"
+    }, 200
+
 def run_flask():
     """Run Flask server in a separate thread."""
     import logging
@@ -132,6 +148,13 @@ async def on_ready():
             name=f"for {PREFIX}help"
         )
     )
+    
+    # Start keep-alive service
+    from keep_alive import KeepAlive
+    keep_alive = KeepAlive(bot)
+    asyncio.create_task(keep_alive.start_keep_alive())
+    print("🔄 Keep-alive service started")
+    
     print("✅ Bot is ready!")
 
 async def main():
