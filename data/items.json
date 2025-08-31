@@ -6,27 +6,33 @@
         "legendary": {"boost": 30, "stat": "HP"}
     },
     "ATK Boost": {
-        "common": {"boost": 5, "stat": "ATK"},
-        "rare": {"boost": 10, "stat": "ATK"},
-        "epic": {"boost": 15, "stat": "ATK"},
-        "legendary": {"boost": 25, "stat": "ATK"}
+        "common": {"boost": 10, "stat": "ATK"},
+        "rare": {"boost": 15, "stat": "ATK"},
+        "epic": {"boost": 20, "stat": "ATK"},
+        "legendary": {"boost": 30, "stat": "ATK"}
     },
     "DEF Boost": {
-        "common": {"boost": 5, "stat": "DEF"},
-        "rare": {"boost": 10, "stat": "DEF"},
-        "epic": {"boost": 15, "stat": "DEF"},
-        "legendary": {"boost": 25, "stat": "DEF"}
+        "common": {"boost": 10, "stat": "DEF"},
+        "rare": {"boost": 15, "stat": "DEF"},
+        "epic": {"boost": 20, "stat": "DEF"},
+        "legendary": {"boost": 30, "stat": "DEF"}
     },
     "SPD Boost": {
-        "common": {"boost": 5, "stat": "SPD"},
-        "rare": {"boost": 10, "stat": "SPD"},
-        "epic": {"boost": 15, "stat": "SPD"},
-        "legendary": {"boost": 25, "stat": "SPD"}
+        "common": {"boost": 10, "stat": "SPD"},
+        "rare": {"boost": 15, "stat": "SPD"},
+        "epic": {"boost": 20, "stat": "SPD"},
+        "legendary": {"boost": 30, "stat": "SPD"}
     },
-    "EVA Boost": {
-        "common": {"boost": 5, "stat": "EVA"},
-        "rare": {"boost": 10, "stat": "EVA"},
-        "epic": {"boost": 15, "stat": "EVA"},
-        "legendary": {"boost": 25, "stat": "EVA"}
+    "SP ATK Boost": {
+        "common": {"boost": 10, "stat": "SP ATK"},
+        "rare": {"boost": 15, "stat": "SP ATK"},
+        "epic": {"boost": 20, "stat": "SP ATK"},
+        "legendary": {"boost": 30, "stat": "SP ATK"}
+    },
+        "SP DEF Boost": {
+        "common": {"boost": 10, "stat": "SP DEF"},
+        "rare": {"boost": 15, "stat": "SP DEF"},
+        "epic": {"boost": 20, "stat": "SP DEF"},
+        "legendary": {"boost": 30, "stat": "SP DEF"}
     }
 }
