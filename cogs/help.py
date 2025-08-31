@@ -34,24 +34,93 @@ class HelpView(discord.ui.View):
         # Helper to get all commands organized by category, excluding hidden and admin ones
         categorized = defaultdict(list)
         emojis = {
-            "Economic": "💰", "Team": "🛡️", "Shop": "🛒", "Market": "📈",
-            "Battle": "⚔️", "Bot Commands": "⚙️", "Reference": "📚", "Player Commands": "👤",
-            "AI Battle": "🤖"
+            "Gacha System": "🎰", "Player Info": "👤", "Economy": "💰", "Shop": "🛒",
+            "Team Management": "🛡️", "Battle System": "⚔️", "Market": "📈", 
+            "Utils": "🔧", "Events": "🎉"
         }
+        
+        # Custom category mapping for specific commands
+        command_categories = {
+            # Gacha System
+            'pull': 'Gacha System',
+            'allcharacters': 'Gacha System', 'characters': 'Gacha System', 'chars': 'Gacha System',
+            'items': 'Gacha System',
+            'select': 'Gacha System',
+            
+            # Player Info
+            'info': 'Player Info',
+            'inventory': 'Player Info', 'inv': 'Player Info',
+            'collection': 'Player Info', 'col': 'Player Info',
+            
+            # Economy
+            'daily': 'Economy',
+            'weekly': 'Economy',
+            'slots': 'Economy',
+            'balance': 'Economy', 'bal': 'Economy',
+            'sell': 'Economy',
+            
+            # Shop
+            'shop': 'Shop',
+            'buy': 'Shop',
+            
+            # Team Management
+            'team': 'Team Management',
+            'equip': 'Team Management', 'eq': 'Team Management',
+            'unequip': 'Team Management', 'ue': 'Team Management',
+            'moves': 'Team Management', 'm': 'Team Management',
+            
+            # Battle System
+            'battle': 'Battle System',
+            'battlecz': 'Battle System',
+            'battleend': 'Battle System',
+            
+            # Market
+            'market': 'Market',
+            
+            # Utils
+            'afk': 'Utils',
+            'calculator': 'Utils', 'calc': 'Utils',
+            
+            # Events (for future)
+            # Add event commands here when they're created
+        }
+        
         for cmd in self.bot.commands:
             if not cmd.hidden and cmd.name != 'help':
-                category = getattr(cmd, 'category', cmd.cog_name or 'Uncategorized')
-                if category != 'Admin':
-                    emoji = emojis.get(category, "❓")
-                    categorized[f"{emoji} {category}"].append(cmd)
+                # Skip certain cogs entirely
+                if cmd.cog_name in ['Admin', 'Webmonitor', 'Core Gameplay', 'Stat Calculations']:
+                    continue
+                
+                # Use custom category mapping or fall back to cog name
+                category = command_categories.get(cmd.name, 'Utils')
+                emoji = emojis.get(category, "❓")
+                categorized[f"{emoji} {category}"].append(cmd)
+        
         return categorized
 
     def category_dropdown(self):
         # Create the dropdown menu for categories
         categorized = self.get_categorized_commands()
         
+        # Better descriptions for each category
+        category_descriptions = {
+            "🎰 Gacha System": "Pull characters and view collections",
+            "👤 Player Info": "View your profile and stats",
+            "💰 Economy": "Earn and spend coins",
+            "🛒 Shop": "Purchase items and tickets",
+            "🛡️ Team Management": "Manage your battle team",
+            "⚔️ Battle System": "Fight battles and competitions",
+            "📈 Market": "Trade with other players",
+            "🔧 Utils": "Utility and fun commands",
+            "🎉 Events": "Special event commands"
+        }
+        
         options = [
-            discord.SelectOption(label=category, description=f"Commands in this category.", value=category)
+            discord.SelectOption(
+                label=category, 
+                description=category_descriptions.get(category, "Commands in this category"),
+                value=category
+            )
             for category in sorted(categorized.keys()) if categorized[category]
         ]
         
@@ -85,18 +154,19 @@ class HelpView(discord.ui.View):
         if not commands_in_category:
             embed.description = "No commands found in this category."
         else:
-            # Build a single description string for a cleaner, more organized look
+            # Build a cleaner, more organized display
             description_lines = []
             for command in commands_in_category:
                 help_text = command.help.split('-')[1].strip() if '-' in command.help else command.help
                 signature = f"{command.name} {command.signature}".strip()
-                aliases = f" (Aliases: {', '.join(f'`{a}`' for a in command.aliases)})" if command.aliases else ""
+                aliases = f" • Aliases: {', '.join(f'`{a}`' for a in command.aliases)}" if command.aliases else ""
                 
                 command_line = f"**`{prefix}{signature}`**{aliases}"
-                description_line = f"```{help_text}```"
+                description_line = f"*{help_text}*"
                 description_lines.append(f"{command_line}\n{description_line}")
-            embed.description = "\n".join(description_lines)
-            embed.set_footer(text=f"Use {prefix}help <command> for more details on a specific command.")
+            
+            embed.description = "\n\n".join(description_lines)
+            embed.set_footer(text=f"💡 Use {prefix}help <command> for detailed information")
         
         await interaction.response.edit_message(embed=embed)
 
