@@ -102,8 +102,9 @@ class BattleAI(commands.Cog, name="AI Battle"):
         challenger = ctx.author
         player_data = db.get_player(challenger.id)
 
-        if not player_data.get('team'):
-            await ctx.send("You need a team to battle! Use `!team create` first."); return
+        team_slots = player_data.get('team', {})
+        if not any(char_id for char_id in team_slots.values() if char_id):
+            await ctx.send("You need a team to battle! Use `!team add` to add characters first."); return
         if player_data['coins'] < 20:
             await ctx.send("You need at least 20 coins to start an AI battle."); return
         if challenger.id in self.active_battles:
@@ -113,8 +114,9 @@ class BattleAI(commands.Cog, name="AI Battle"):
         if not stats_cog:
             await ctx.send("Game systems are currently offline (Stats module not loaded)."); return
 
-        team_levels = [player_data['characters'][cid]['level'] for cid in player_data['team']]
-        avg_level = max(1, sum(team_levels) // len(team_levels))
+        team_slots = player_data.get('team', {})
+        team_levels = [player_data['characters'][cid]['level'] for cid in team_slots.values() if cid and cid in player_data['characters']]
+        avg_level = max(1, sum(team_levels) // len(team_levels)) if team_levels else 1
         
         bot_team_chars = random.sample(list(self.characters.items()), 3)
         bot_team = [stats_cog._scale_character_to_level({"name": name, **data}, avg_level) for name, data in bot_team_chars]
@@ -149,11 +151,13 @@ class BattleAI(commands.Cog, name="AI Battle"):
         try:
             def prep_team(player_data):
                 team = []
-                for char_id in player_data.get('team', []):
-                    inst = player_data['characters'][char_id].copy()
-                    inst['stats'] = stats_cog.get_character_display_stats(inst)
-                    inst['current_hp'] = inst['stats']['HP']
-                    team.append(inst)
+                team_slots = player_data.get('team', {})
+                for slot, char_id in team_slots.items():
+                    if char_id and char_id in player_data['characters']:
+                        inst = player_data['characters'][char_id].copy()
+                        inst['stats'] = stats_cog.get_character_display_stats(inst)
+                        inst['current_hp'] = inst['stats']['HP']
+                        team.append(inst)
                 return team
 
             user_team = prep_team(user_data)
