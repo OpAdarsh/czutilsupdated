@@ -34,13 +34,13 @@ def has_accepted_rules():
         cz_cog = ctx.bot.get_cog('Core Gameplay')
         if not cz_cog:
             return False
-        
+
         # Check if user already has a pending rules prompt
         if ctx.author.id in cz_cog.rules_prompts.values():
             return False
 
         embed = discord.Embed(
-            title="⚔️ Welcome to the CZ Game! ⚔️",
+            title="⚔️ Welcome to the CZ Game ⚔️",
             description="Before you begin your adventure, you must accept the rules.",
             color=discord.Color.gold()
         )
@@ -60,9 +60,9 @@ def has_accepted_rules():
 
         prompt_message = await ctx.send(embed=embed)
         await prompt_message.add_reaction('✅')
-        
+
         cz_cog.rules_prompts[prompt_message.id] = ctx.author.id
-        
+
         await ctx.send("Please accept the rules above to continue.", delete_after=10)
         return False
 
@@ -92,7 +92,7 @@ class CharacterManagement(commands.Cog, name="Player Commands"):
 
         if not matches:
             await ctx.send(f"❌ No character found in your collection with the name `{identifier}`."); return None
-        
+
         if len(matches) == 1:
             return matches[0][0]
 
@@ -108,7 +108,7 @@ class CharacterManagement(commands.Cog, name="Player Commands"):
             await ctx.send("Game systems are currently offline. Please try again later."); return
 
         player = db.get_player(ctx.author.id)
-        
+
         # Check for tickets to bypass cooldown
         has_ticket = player['inventory'].get('🎟️ Pull Ticket', 0) > 0
         cooldown = 300  # 5 minutes
@@ -130,26 +130,26 @@ class CharacterManagement(commands.Cog, name="Player Commands"):
 
         char_name, char_data = random.choice(list(self.characters.items()))
         base_char = {"name": char_name, **char_data}
-        
+
         new_char_instance = cz_cog._create_character_instance(base_char)
-        
+
         random_level = random.randint(1, 25)
         new_char_instance['level'] = random_level
-        
+
         base_stats = {k: v for k, v in char_data.items() if k in ['HP', 'ATK', 'DEF', 'SPD', 'SP_ATK', 'SP_DEF']}
         new_char_instance['stats'] = stats_cog._calculate_stats(base_stats, new_char_instance['individual_ivs'], random_level)
-        
+
         char_id = player['next_character_id']
         player['characters'][char_id] = new_char_instance
         player['latest_pull_id'] = char_id
         player['next_character_id'] += 1
-        
+
         # Only update pull time if not using ticket
         if not ticket_used:
             player['last_pull_time'] = time.time()
-        
+
         db.update_player(ctx.author.id, player)
-        
+
         ticket_text = " (🎟️ Ticket used)" if ticket_used else ""
         await ctx.send(f"You pulled a **Lvl {random_level} {char_name}** with **{new_char_instance['iv']}% IV**{ticket_text}! Use `!info latest` to see their stats.")
 
@@ -168,10 +168,10 @@ class CharacterManagement(commands.Cog, name="Player Commands"):
 
         character_to_sell = player['characters'][char_id]
         sale_price = 10 + (character_to_sell['level'] * 2) + round(character_to_sell['iv'] / 5)
-        
+
         del player['characters'][char_id]
         player['coins'] += sale_price
-        
+
         db.update_player(ctx.author.id, player)
         await ctx.send(f"You sold **{character_to_sell['name']}** for **{sale_price}** coins.")
 
@@ -188,12 +188,12 @@ class CharacterManagement(commands.Cog, name="Player Commands"):
         today, today_str = datetime.date.today(), datetime.date.today().isoformat()
         if player['last_daily_date'] == today_str:
             await ctx.send("You have already claimed your daily reward today!"); return
-        
+
         yesterday = today - datetime.timedelta(days=1)
         player['daily_streak'] = player['daily_streak'] + 1 if player['last_daily_date'] == yesterday.isoformat() else 1
         base_reward, bonus = 50, (player['daily_streak'] - 1) * random.randint(10, 20)
         total_reward = min(200, base_reward + bonus)
-        
+
         player['coins'] += total_reward
         player['last_daily_date'] = today_str
         db.update_player(ctx.author.id, player)
@@ -205,14 +205,14 @@ class CharacterManagement(commands.Cog, name="Player Commands"):
         player = db.get_player(ctx.author.id)
         today = datetime.date.today()
         last_weekly = player.get('last_weekly_date')
-        
+
         if last_weekly:
             last_weekly_date = datetime.datetime.strptime(last_weekly, '%Y-%m-%d').date()
             days_since_weekly = (today - last_weekly_date).days
             if days_since_weekly < 7:
                 days_remaining = 7 - days_since_weekly
                 await ctx.send(f"You can claim your weekly reward in **{days_remaining}** day(s)!"); return
-        
+
         weekly_reward = random.randint(1000, 1500)
         player['coins'] += weekly_reward
         player['last_weekly_date'] = today.isoformat()
@@ -223,24 +223,24 @@ class CharacterManagement(commands.Cog, name="Player Commands"):
     @has_accepted_rules()
     async def slots(self, ctx, amount: int):
         player = db.get_player(ctx.author.id)
-        
+
         if amount < 10:
             await ctx.send("Minimum bet is **10** coins!"); return
         if amount > player['coins']:
             await ctx.send("You don't have enough coins!"); return
         if amount > 1000:
             await ctx.send("Maximum bet is **1000** coins!"); return
-        
+
         # Deduct the bet
         player['coins'] -= amount
-        
+
         # Slot machine symbols and their weights
         symbols = ['🍒', '🍋', '🍊', '🍇', '🔔', '💎', '7️⃣']
         weights = [25, 20, 20, 15, 10, 7, 3]  # Higher chance for lower value symbols
-        
+
         # Generate 3 random symbols
         result = random.choices(symbols, weights=weights, k=3)
-        
+
         # Calculate winnings
         winnings = 0
         if result[0] == result[1] == result[2]:  # Three of a kind
@@ -248,14 +248,14 @@ class CharacterManagement(commands.Cog, name="Player Commands"):
             winnings = amount * multipliers.get(result[0], 2)
         elif result[0] == result[1] or result[1] == result[2] or result[0] == result[2]:  # Two of a kind
             winnings = int(amount * 0.5)
-        
+
         player['coins'] += winnings
         db.update_player(ctx.author.id, player)
-        
+
         result_display = " | ".join(result)
         embed = discord.Embed(title="🎰 Slot Machine", color=discord.Color.gold())
         embed.add_field(name="Result", value=f"[ {result_display} ]", inline=False)
-        
+
         if winnings > 0:
             profit = winnings - amount
             if profit > 0:
@@ -267,7 +267,7 @@ class CharacterManagement(commands.Cog, name="Player Commands"):
         else:
             embed.add_field(name="💔 You Lost", value=f"**-{amount}** coins", inline=False)
             embed.color = discord.Color.red()
-        
+
         embed.add_field(name="Balance", value=f"💰 {player['coins']} coins", inline=False)
         await ctx.send(embed=embed)
 
@@ -278,10 +278,10 @@ class CharacterManagement(commands.Cog, name="Player Commands"):
         sort_key = sort_by.lower()
         if sort_key not in valid_sorts:
             await ctx.send(f"Invalid sort key. Use one of: `{'`, `'.join(valid_sorts)}`"); return
-        
+
         char_list = list(self.characters.items())
         sorted_chars = sorted(char_list, key=lambda i: i[0]) if sort_key == 'name' else sorted(char_list, key=lambda i: i[1].get(sort_key.upper(), 0), reverse=True)
-        
+
         pages = [sorted_chars[i:i + 10] for i in range(0, len(sorted_chars), 10)]
         current_page = 0
 
@@ -312,7 +312,7 @@ class CharacterManagement(commands.Cog, name="Player Commands"):
         cz_cog = self.bot.get_cog('Core Gameplay')
         if not stats_cog or not cz_cog:
             await ctx.send("Game systems are currently offline."); return
-            
+
         player = db.get_player(ctx.author.id)
         if identifier.lower() == 'latest':
             char_id = player.get('latest_pull_id')
@@ -327,12 +327,12 @@ class CharacterManagement(commands.Cog, name="Player Commands"):
 
         embed = discord.Embed(title=f"{char['name']} (ID: {char_id}, IV: {char['iv']}%)", description=char['description'], color=discord.Color.blue())
         xp_needed = cz_cog._get_xp_for_next_level(char['level'])
-        
+
         stats_text = f"**Lvl:** {char['level']} ({char['xp']}/{xp_needed} XP)\n"
         for stat, value in display_stats.items():
             iv_value = char.get('individual_ivs', {}).get(stat, 0)
             stats_text += f"**{stat.upper()}:** {value} (IV: {iv_value}/31)\n"
-        
+
         embed.add_field(name="Stats", value=stats_text, inline=False)
         embed.add_field(name="Ability", value=char['ability'], inline=True)
         embed.add_field(name="Equipped", value=char.get('equipped_item', "None"), inline=True)
@@ -344,14 +344,14 @@ class CharacterManagement(commands.Cog, name="Player Commands"):
     async def info_latest(self, ctx):
         # Call the info command with "latest" as argument
         await self.info(ctx, identifier="latest")
-            
+
     @commands.command(name='collection', aliases=['col'], help="!collection - View your character collection.", category="Player Info")
     @has_accepted_rules()
     async def collection(self, ctx):
         player = db.get_player(ctx.author.id)
         if not player['characters']:
             await ctx.send("Your collection is empty!"); return
-        
+
         embed = discord.Embed(title=f"{ctx.author.display_name}'s Collection", color=discord.Color.purple())
         team_char_ids = [char_id for char_id in player.get('team', {}).values() if char_id is not None]
         desc = "".join([f"`{cid}`: **Lvl {c['level']} {c['name']}** ({c['iv']}% IV) {'🛡️' if cid in team_char_ids else ''}{'⭐' if cid == player.get('selected_character_id') else ''}\n" for cid, c in player['characters'].items()])
@@ -365,7 +365,7 @@ class CharacterManagement(commands.Cog, name="Player Commands"):
         if not player['inventory']:
             await ctx.send("Your inventory is empty."); return
         embed = discord.Embed(title="Your Inventory", color=discord.Color.orange())
-        
+
         # Format items with special handling for tickets
         inventory_text = []
         for name, count in player['inventory'].items():
@@ -373,7 +373,7 @@ class CharacterManagement(commands.Cog, name="Player Commands"):
                 inventory_text.append(f"🎟️ **Pull Tickets**: x{count}")
             else:
                 inventory_text.append(f"**{name}**: x{count}")
-        
+
         embed.description = "\n".join(inventory_text)
         await ctx.send(embed=embed)
 
@@ -383,13 +383,13 @@ class CharacterManagement(commands.Cog, name="Player Commands"):
         if item_name is None:
             # Show all available items
             embed = discord.Embed(title="📦 Available Items", description="Use `!items <item_name>` for detailed info", color=discord.Color.gold())
-            
+
             for item_type, rarities in self.items.items():
                 rarity_list = []
                 for rarity in rarities.keys():
                     rarity_list.append(f"{rarity.title()}")
                 embed.add_field(name=f"**{item_type}**", value=" | ".join(rarity_list), inline=False)
-            
+
             embed.set_footer(text="Items boost stats when equipped to characters")
             await ctx.send(embed=embed)
         else:
@@ -397,19 +397,19 @@ class CharacterManagement(commands.Cog, name="Player Commands"):
             item_name_lower = item_name.lower()
             found_item = None
             found_type = None
-            
+
             # Search for the item
             for item_type, rarities in self.items.items():
                 if item_name_lower in item_type.lower():
                     found_type = item_type
                     found_item = rarities
                     break
-            
+
             if not found_item:
                 await ctx.send(f"❌ Item '{item_name}' not found. Use `!items` to see all available items."); return
-            
+
             embed = discord.Embed(title=f"📦 {found_type}", description="Stat boost item that can be equipped to characters", color=discord.Color.blue())
-            
+
             for rarity, data in found_item.items():
                 boost_stat = data['stat']
                 boost_amount = data['boost']
@@ -418,7 +418,7 @@ class CharacterManagement(commands.Cog, name="Player Commands"):
                     value=f"**Boosts:** {boost_stat} by +{boost_amount}%\n**Usage:** Equip to character with `!equip <character>, {rarity} {found_type}`", 
                     inline=False
                 )
-            
+
             embed.set_footer(text="Get items from Item Boxes in the shop!")
             await ctx.send(embed=embed)
 
@@ -445,9 +445,9 @@ class CharacterManagement(commands.Cog, name="Player Commands"):
     async def view_team(self, ctx):
         player = db.get_player(ctx.author.id)
         team_slots = player.get('team', {'1': None, '2': None, '3': None})
-        
+
         embed = discord.Embed(title="Your Active Team", color=discord.Color.green())
-        
+
         # Always show all 3 slots
         for slot in ['1', '2', '3']:
             char_id = team_slots.get(slot)
@@ -459,7 +459,7 @@ class CharacterManagement(commands.Cog, name="Player Commands"):
                     embed.add_field(name=f"Slot {slot}", value=f"Invalid Character (ID: {char_id})", inline=False)
             else:
                 embed.add_field(name=f"Slot {slot}", value="📭 Empty Position\n*Use `!team add {slot} <character>` to fill*", inline=False)
-                
+
         await ctx.send(embed=embed)
 
     @team.command(name='add', help="!team add <slot> <id_or_name> - Adds a character to a team slot.", category="Team Management")
@@ -473,13 +473,13 @@ class CharacterManagement(commands.Cog, name="Player Commands"):
 
         if team_slots.get(slot) is not None:
             await ctx.send(f"Slot {slot} is already occupied. Use `!team swap` or `!team remove` first."); return
-            
+
         char_id = await self._find_character_from_input(ctx, player, identifier)
         if char_id is None: return
-        
+
         # Ensure char_id is integer for consistency
         char_id = int(char_id)
-        
+
         if char_id in team_slots.values():
             await ctx.send("This character is already on your team in another slot."); return
 
@@ -494,14 +494,14 @@ class CharacterManagement(commands.Cog, name="Player Commands"):
     async def team_remove(self, ctx, slot: str):
         if slot not in ['1', '2', '3']:
             await ctx.send("Invalid slot. Please choose 1, 2, or 3."); return
-            
+
         player = db.get_player(ctx.author.id)
         team_slots = player.get('team', {'1': None, '2': None, '3': None})
-        
+
         char_id = team_slots.get(slot)
         if char_id is None:
             await ctx.send(f"Slot {slot} is already empty."); return
-            
+
         char_name = player['characters'][char_id]['name']
         team_slots[slot] = None
         player['team'] = team_slots
@@ -514,13 +514,13 @@ class CharacterManagement(commands.Cog, name="Player Commands"):
     async def team_swap(self, ctx, slot: str, *, identifier: str):
         if slot not in ['1', '2', '3']:
             await ctx.send("Invalid slot. Please choose 1, 2, or 3."); return
-            
+
         player = db.get_player(ctx.author.id)
         team_slots = player.get('team', {'1': None, '2': None, '3': None})
 
         char_id_to_add = await self._find_character_from_input(ctx, player, identifier)
         if char_id_to_add is None: return
-        
+
         # Ensure char_id is integer for consistency
         char_id_to_add = int(char_id_to_add)
 
@@ -530,10 +530,10 @@ class CharacterManagement(commands.Cog, name="Player Commands"):
             if c_id == char_id_to_add:
                 current_slot_of_char = s
                 break
-        
+
         # Swap logic
         char_currently_in_target_slot = team_slots.get(slot)
-        
+
         if current_slot_of_char:
             team_slots[current_slot_of_char] = char_currently_in_target_slot
             team_slots[slot] = char_id_to_add
@@ -557,16 +557,16 @@ class CharacterManagement(commands.Cog, name="Player Commands"):
         player = db.get_player(ctx.author.id)
         char_id = await self._find_character_from_input(ctx, player, identifier)
         if char_id is None: return
-        
+
         item_name_lower = item_name.lower()
         found_item = next((inv_item for inv_item in player['inventory'] if item_name_lower == inv_item.lower()), None)
         if not found_item or player['inventory'].get(found_item, 0) == 0:
             await ctx.send(f"You don't have an item named '{item_name}'."); return
-            
+
         character = player['characters'][char_id]
         if character['equipped_item']:
             await ctx.send(f"**{character['name']}** already has an item equipped. Unequip it first."); return
-        
+
         character['equipped_item'] = found_item
         player['inventory'][found_item] -= 1
         if player['inventory'][found_item] == 0: del player['inventory'][found_item]
@@ -579,12 +579,12 @@ class CharacterManagement(commands.Cog, name="Player Commands"):
         player = db.get_player(ctx.author.id)
         char_id = await self._find_character_from_input(ctx, player, identifier)
         if char_id is None: return
-        
+
         character = player['characters'][char_id]
         item_name = character['equipped_item']
         if not item_name:
             await ctx.send(f"**{character['name']}** has no item equipped."); return
-            
+
         character['equipped_item'] = None
         player['inventory'][item_name] = player['inventory'].get(item_name, 0) + 1
         db.update_player(ctx.author.id, player)
@@ -601,17 +601,17 @@ class CharacterManagement(commands.Cog, name="Player Commands"):
         else:
             char_id = await self._find_character_from_input(ctx, player, identifier)
             if char_id is None: return
-            
+
         character = player['characters'][char_id]
         embed = discord.Embed(title=f"Moveset for {character['name']} (Lvl {character['level']})", color=discord.Color.orange())
-        
+
         all_special_moves = self.attacks.get('characters', {}).get(str(character.get('id')), [])
         active_moves = character.get('moveset', [None, None, None, None])
-        
+
         # Ensure moveset has 4 slots
         while len(active_moves) < 4:
             active_moves.append(None)
-        
+
         # Display active moveset in 4-slot format
         moveset_display = []
         for i, move_name in enumerate(active_moves, 1):
@@ -627,7 +627,7 @@ class CharacterManagement(commands.Cog, name="Player Commands"):
                     moveset_display.append(f"**{i}.** {move_name} - (Data not found)")
             else:
                 moveset_display.append(f"**{i}.** *Empty Slot* - Use `!learn` to fill")
-        
+
         embed.add_field(name="⚔️ Active Moveset (4 Slots)", value="\n".join(moveset_display), inline=False)
 
         active_moves_names = [move for move in active_moves if move is not None]
@@ -636,7 +636,7 @@ class CharacterManagement(commands.Cog, name="Player Commands"):
                                 if m['unlock_level'] <= character['level'] and m['name'] not in active_moves_names]
         if unlocked_and_inactive:
             embed.add_field(name="📚 Unlocked (Inactive)", value="\n".join(unlocked_and_inactive), inline=False)
-            
+
         locked_moves = [f"**{m['name']}** (Lvl {m['unlock_level']})"
                         for m in all_special_moves
                         if m['unlock_level'] > character['level']]
@@ -661,7 +661,7 @@ class CharacterManagement(commands.Cog, name="Player Commands"):
         character = player['characters'][char_id]
         common_move_names = [m['name'].lower() for m in self.attacks.get('physical', []) + self.attacks.get('special', [])]
         old_move_name = next((m for m in character.get('moveset', []) if m.lower() == old_move.lower()), None)
-        
+
         if not old_move_name:
             await ctx.send(f"'{old_move}' is not in your active moveset."); return
         if old_move_name.lower() in common_move_names:
@@ -669,7 +669,7 @@ class CharacterManagement(commands.Cog, name="Player Commands"):
 
         all_special_moves = self.attacks.get('characters', {}).get(str(character.get('id')), [])
         new_move_data = next((m for m in all_special_moves if m['name'].lower() == new_move.lower()), None)
-        
+
         if not new_move_data:
             await ctx.send(f"'{new_move}' is not a valid special move for this character."); return
         if character['level'] < new_move_data['unlock_level']:
@@ -697,13 +697,13 @@ class CharacterManagement(commands.Cog, name="Player Commands"):
             self.current_moveset = current_moveset
             self.player = player
             self.char_id = None
-            
+
             # Find character ID
             for cid, char in player['characters'].items():
                 if char == character:
                     self.char_id = cid
                     break
-            
+
             # Create buttons for each slot
             for i in range(4):
                 current_move = current_moveset[i] if current_moveset[i] else "Empty"
@@ -714,148 +714,125 @@ class CharacterManagement(commands.Cog, name="Player Commands"):
                 )
                 button.callback = self.create_slot_callback(i)
                 self.add_item(button)
-        
+
         def create_slot_callback(self, slot_index):
             async def slot_callback(interaction: discord.Interaction):
                 if interaction.user.id != self.ctx.author.id:
                     await interaction.response.send_message("❌ This isn't your learn command!", ephemeral=True)
                     return
-                
+
                 old_move = self.current_moveset[slot_index] if self.current_moveset[slot_index] else "Empty Slot"
                 self.current_moveset[slot_index] = self.move_data['name']
                 self.character['moveset'] = self.current_moveset
-                
+
                 # Update database
                 db.update_player(self.ctx.author.id, self.player)
-                
+
                 if old_move == "Empty Slot":
                     response = f"✅ **{self.character['name']}** learned **{self.move_data['name']}** in slot {slot_index + 1}!"
                 else:
                     response = f"✅ **{self.character['name']}** forgot **{old_move}** and learned **{self.move_data['name']}** in slot {slot_index + 1}!"
-                
+
                 await interaction.response.edit_message(content=response, embed=None, view=None)
                 self.stop()
-            
+
             return slot_callback
-        
+
         async def on_timeout(self):
             try:
                 await self.message.edit(content="⏰ Move learning timed out. Try again when you're ready.", embed=None, view=None)
             except:
                 pass
 
-    @commands.command(name='learn', help="!learn <move_name> OR !learn <character>, <move_name> OR !learn <character>, <slot>, <move_name> - Teaches a move to a character.", category="Team Management")
+    @commands.command(name='learn', help="!learn <move_name> <position> - Teaches a move to selected character. Use !select first.", category="Team Management")
     @has_accepted_rules()
-    async def learn_move(self, ctx, *, arguments: str):
+    async def learn_move(self, ctx, move_name: str, position: int = None):
         player = db.get_player(ctx.author.id)
-        
-        # Parse arguments - support multiple formats
-        parts = [arg.strip() for arg in arguments.split(',')]
-        
-        if len(parts) == 3:
-            # Format: !learn <character>, <slot>, <move_name>
-            identifier, slot_str, move_name = parts
-            try:
-                target_slot = int(slot_str) - 1  # Convert to 0-based index
-                if target_slot < 0 or target_slot > 3:
-                    await ctx.send("❌ Slot must be between 1-4!")
-                    return
-            except ValueError:
-                await ctx.send("❌ Invalid slot number. Use: `!learn <character>, <slot 1-4>, <move_name>`")
-                return
-            
-            char_id = await self._find_character_from_input(ctx, player, identifier)
-            if char_id is None:
-                return
-                
-        elif len(parts) == 2:
-            # Format: !learn <character>, <move_name>
-            identifier, move_name = parts
-            target_slot = None
-            char_id = await self._find_character_from_input(ctx, player, identifier)
-            if char_id is None:
-                return
-                
-        elif len(parts) == 1:
-            # Format: !learn <move_name> (use selected character)
-            move_name = parts[0]
-            target_slot = None
-            char_id = player.get('selected_character_id')
-            if not char_id:
-                await ctx.send("❌ No character selected! Use `!select <character>` first, or use `!learn <character>, <move_name>`")
-                return
-            if char_id not in player['characters']:
-                await ctx.send("❌ Your selected character no longer exists! Please select a new one.")
-                return
-        else:
-            await ctx.send("❌ Invalid format. Use:\n• `!learn <move_name>`\n• `!learn <character>, <move_name>`\n• `!learn <character>, <slot 1-4>, <move_name>`")
+
+        # Check if user has selected a character
+        char_id = player.get('selected_character_id')
+        if not char_id:
+            await ctx.send("❌ **No character selected!** Use `!select <character>` first to choose which character should learn the move.")
+            return
+
+        if char_id not in player['characters']:
+            await ctx.send("❌ Your selected character no longer exists! Please select a new one with `!select <character>`.")
             return
 
         # Ensure char_id is integer for consistency
         char_id = int(char_id)
         character = player['characters'][char_id]
-        
+
+        # Validate position if provided
+        if position is not None:
+            if position < 1 or position > 4:
+                await ctx.send("❌ **Invalid position!** Use positions 1, 2, 3, or 4.")
+                return
+            target_slot = position - 1  # Convert to 0-based index
+        else:
+            target_slot = None
+
         # Get all available moves for this character
         all_special_moves = self.attacks.get('characters', {}).get(str(character.get('id')), [])
         common_physical = self.attacks.get('physical', [])
         common_special = self.attacks.get('special', [])
-        
+
         # Find the move
         move_data = None
         for move_list in [common_physical, common_special, all_special_moves]:
             move_data = next((m for m in move_list if m['name'].lower() == move_name.lower()), None)
             if move_data:
                 break
-        
+
         if not move_data:
-            await ctx.send(f"❌ **Error:** Move '{move_name}' not found.")
+            await ctx.send(f"❌ **Move '{move_name}' not found!** Use `!moves {character['name']}` to see available moves.")
             return
-        
+
         # Check if it's a special move that requires unlocking
         if move_data in all_special_moves and character['level'] < move_data['unlock_level']:
-            await ctx.send(f"❌ **Error:** '{move_data['name']}' requires level {move_data['unlock_level']} to learn (current level: {character['level']}).")
+            await ctx.send(f"❌ **'{move_data['name']}' requires level {move_data['unlock_level']}** to learn! (Current level: {character['level']})")
             return
-        
+
         # Check if move is already known
         current_moveset = character.get('moveset', [None, None, None, None])
         if move_data['name'] in current_moveset:
             await ctx.send(f"❌ **{character['name']}** already knows **{move_data['name']}**!")
             return
-        
-        # If specific slot was requested
+
+        # If specific position was requested
         if target_slot is not None:
             old_move = current_moveset[target_slot] if current_moveset[target_slot] else "Empty Slot"
             current_moveset[target_slot] = move_data['name']
             character['moveset'] = current_moveset
             db.update_player(ctx.author.id, player)
-            
+
             if old_move == "Empty Slot":
-                await ctx.send(f"✅ **{character['name']}** learned **{move_data['name']}** in slot {target_slot + 1}!")
+                await ctx.send(f"✅ **{character['name']}** learned **{move_data['name']}** in position {position}!")
             else:
-                await ctx.send(f"✅ **{character['name']}** forgot **{old_move}** and learned **{move_data['name']}** in slot {target_slot + 1}!")
+                await ctx.send(f"✅ **{character['name']}** forgot **{old_move}** and learned **{move_data['name']}** in position {position}!")
             return
-        
-        # Find first empty slot or use UI for selection
+
+        # No position specified - find first empty slot or show UI
         empty_slot = None
         for i, move in enumerate(current_moveset):
             if move is None:
                 empty_slot = i
                 break
-        
+
         if empty_slot is not None:
             # Learn move in empty slot
             current_moveset[empty_slot] = move_data['name']
             character['moveset'] = current_moveset
             db.update_player(ctx.author.id, player)
-            await ctx.send(f"✅ **{character['name']}** learned **{move_data['name']}** in slot {empty_slot + 1}!")
+            await ctx.send(f"✅ **{character['name']}** learned **{move_data['name']}** in position {empty_slot + 1}!")
         else:
             # All slots full, show slot selection UI
             embed = discord.Embed(
                 title=f"🎯 Learn Move: {move_data['name']}",
-                description=f"**{character['name']}'s** moveset is full! Choose which slot to replace:",
+                description=f"**{character['name']}'s** moveset is full! Choose which position to replace:",
                 color=discord.Color.orange()
             )
-            
+
             # Show current moveset with move details
             moveset_info = []
             for i, move in enumerate(current_moveset):
@@ -866,7 +843,7 @@ class CharacterManagement(commands.Cog, name="Player Commands"):
                         move_info = next((m for m in move_list if m['name'] == move), None)
                         if move_info:
                             break
-                    
+
                     if move_info:
                         power = move_info.get('power', 0)
                         accuracy = move_info.get('accuracy', 100)
@@ -876,9 +853,9 @@ class CharacterManagement(commands.Cog, name="Player Commands"):
                         moveset_info.append(f"**{i+1}.** {move}")
                 else:
                     moveset_info.append(f"**{i+1}.** *Empty*")
-            
+
             embed.add_field(name="Current Moveset", value="\n".join(moveset_info), inline=False)
-            
+
             # Show new move details
             new_move_power = move_data.get('power', 0)
             new_move_acc = move_data.get('accuracy', 100)
@@ -888,11 +865,12 @@ class CharacterManagement(commands.Cog, name="Player Commands"):
                 value=f"**{move_data['name']}** - Power: {new_move_power}, Acc: {new_move_acc}%, Type: {new_move_type}", 
                 inline=False
             )
-            
+
+            embed.set_footer(text="You can also use: !learn <move_name> <position 1-4>")
+
             view = self.SlotSelectionView(ctx, character, move_data, current_moveset, player)
             message = await ctx.send(embed=embed, view=view)
             view.message = message
 
 async def setup(bot):
     await bot.add_cog(CharacterManagement(bot))
-
