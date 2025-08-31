@@ -9,6 +9,153 @@ class Market(commands.Cog, name="Market"):
     def __init__(self, bot):
         self.bot = bot
 
+    def _apply_market_filters(self, listings, filter_string):
+        """Apply PokéTwo-style filters to market listings."""
+        if not filter_string:
+            return listings
+        
+        filtered = []
+        for listing in listings:
+            char = listing['character_data']
+            include = True
+            
+            # Split filters by spaces, but handle quoted strings
+            import shlex
+            try:
+                filter_parts = shlex.split(filter_string.lower())
+            except ValueError:
+                filter_parts = filter_string.lower().split()
+            
+            for filter_part in filter_parts:
+                if ':' in filter_part:
+                    # Handle key:value filters
+                    key, value = filter_part.split(':', 1)
+                    
+                    if key == 'name':
+                        if value not in char['name'].lower():
+                            include = False
+                            break
+                    elif key == 'level':
+                        if str(char['level']) != value:
+                            include = False
+                            break
+                    elif key == 'price':
+                        if str(listing['price']) != value:
+                            include = False
+                            break
+                elif filter_part.startswith('level'):
+                    # Handle level comparisons
+                    if '>=' in filter_part:
+                        try:
+                            min_level = int(filter_part.split('>=')[1])
+                            if char['level'] < min_level:
+                                include = False
+                                break
+                        except (ValueError, IndexError):
+                            continue
+                    elif '<=' in filter_part:
+                        try:
+                            max_level = int(filter_part.split('<=')[1])
+                            if char['level'] > max_level:
+                                include = False
+                                break
+                        except (ValueError, IndexError):
+                            continue
+                    elif '>' in filter_part:
+                        try:
+                            min_level = int(filter_part.split('>')[1])
+                            if char['level'] <= min_level:
+                                include = False
+                                break
+                        except (ValueError, IndexError):
+                            continue
+                    elif '<' in filter_part:
+                        try:
+                            max_level = int(filter_part.split('<')[1])
+                            if char['level'] >= max_level:
+                                include = False
+                                break
+                        except (ValueError, IndexError):
+                            continue
+                elif filter_part.startswith('price'):
+                    # Handle price comparisons
+                    if '>=' in filter_part:
+                        try:
+                            min_price = int(filter_part.split('>=')[1])
+                            if listing['price'] < min_price:
+                                include = False
+                                break
+                        except (ValueError, IndexError):
+                            continue
+                    elif '<=' in filter_part:
+                        try:
+                            max_price = int(filter_part.split('<=')[1])
+                            if listing['price'] > max_price:
+                                include = False
+                                break
+                        except (ValueError, IndexError):
+                            continue
+                    elif '>' in filter_part:
+                        try:
+                            min_price = int(filter_part.split('>')[1])
+                            if listing['price'] <= min_price:
+                                include = False
+                                break
+                        except (ValueError, IndexError):
+                            continue
+                    elif '<' in filter_part:
+                        try:
+                            max_price = int(filter_part.split('<')[1])
+                            if listing['price'] >= max_price:
+                                include = False
+                                break
+                        except (ValueError, IndexError):
+                            continue
+                elif filter_part.startswith('iv'):
+                    # Handle IV comparisons
+                    if '>=' in filter_part:
+                        try:
+                            min_iv = float(filter_part.split('>=')[1])
+                            if char['iv'] < min_iv:
+                                include = False
+                                break
+                        except (ValueError, IndexError):
+                            continue
+                    elif '<=' in filter_part:
+                        try:
+                            max_iv = float(filter_part.split('<=')[1])
+                            if char['iv'] > max_iv:
+                                include = False
+                                break
+                        except (ValueError, IndexError):
+                            continue
+                    elif '>' in filter_part:
+                        try:
+                            min_iv = float(filter_part.split('>')[1])
+                            if char['iv'] <= min_iv:
+                                include = False
+                                break
+                        except (ValueError, IndexError):
+                            continue
+                    elif '<' in filter_part:
+                        try:
+                            max_iv = float(filter_part.split('<')[1])
+                            if char['iv'] >= max_iv:
+                                include = False
+                                break
+                        except (ValueError, IndexError):
+                            continue
+                else:
+                    # Handle simple name filter
+                    if filter_part not in char['name'].lower():
+                        include = False
+                        break
+            
+            if include:
+                filtered.append(listing)
+        
+        return filtered
+
     @commands.group(name='market', invoke_without_command=True, help="!market - Interact with the player market.", category="Market")
     async def market(self, ctx):
         await ctx.send_help(ctx.command)
@@ -34,67 +181,92 @@ class Market(commands.Cog, name="Market"):
 
         await ctx.send(f"✅ You have listed **{character_to_list['name']}** (Lvl {character_to_list['level']}) on the market for **{price}** coins. Listing ID: **#{listing_id}**")
 
-    @market.command(name='view', help="!market view [--filters] - View market listings.")
+    @market.command(name='view', help="!market view [filters] - View market listings with optional filters.")
     async def market_view(self, ctx, *, filters: str = None):
+        import math
+        import asyncio
+        
         listings = db.get_all_market_listings()
         if not listings:
             await ctx.send("The market is currently empty."); return
 
-        filtered_listings = []
-        if filters:
-            # Simple parser for filters like --atk > 30, --iv 85, --spd < 50
-            filter_pattern = re.compile(r"--(\w+)\s*([<>=])?\s*(\d+\.?\d*)")
-            parsed_filters = filter_pattern.findall(filters)
+        # Apply enhanced filters
+        filtered_listings = self._apply_market_filters(listings, filters)
+        
+        if not filtered_listings:
+            await ctx.send("No listings match your filters."); return
 
-            for listing in listings:
-                char = listing['character_data']
-                matches_all = True
-                for key, op, val in parsed_filters:
-                    key = key.lower()
-                    op = op or '=' # Default to exact match
-                    val = float(val)
-                    
-                    stat_val = None
-                    if key == 'iv':
-                        stat_val = char['iv']
-                    elif key.upper() in char['individual_ivs']:
-                        stat_val = char['individual_ivs'][key.upper()]
-                    
-                    if stat_val is None:
-                        matches_all = False; break
+        # Sort by price (ascending) by default
+        filtered_listings.sort(key=lambda x: x['price'])
 
-                    if not ((op == '>' and stat_val > val) or
-                            (op == '<' and stat_val < val) or
-                            (op == '=' and stat_val == val)):
-                        matches_all = False; break
-                
-                if matches_all:
-                    filtered_listings.append(listing)
-            listings = filtered_listings
-            if not listings:
-                await ctx.send("No listings match your filters."); return
+        # Pagination setup
+        listings_per_page = 8
+        total_pages = math.ceil(len(filtered_listings) / listings_per_page)
+        current_page = 0
 
-        # Pagination for market view
-        paginator = commands.Paginator(prefix='', suffix='', max_size=1024)
-        for listing in listings:
-            char = listing['character_data']
-            try:
-                seller = await self.bot.fetch_user(listing['seller_id'])
-                seller_name = seller.display_name
-            except discord.NotFound:
-                seller_name = "Unknown User"
-                
-            paginator.add_line(
-                f"**ID: #{listing['listing_id']}** | **{char['name']}** Lvl {char['level']} ({char['iv']}% IV)\n"
-                f"Price: `{listing['price']}` coins | Seller: `{seller_name}`"
+        async def create_market_embed(page_num):
+            start_idx = page_num * listings_per_page
+            end_idx = start_idx + listings_per_page
+            page_listings = filtered_listings[start_idx:end_idx]
+
+            embed = discord.Embed(
+                title="🏪 Player Market",
+                description=f"Page {page_num + 1}/{total_pages} • {len(filtered_listings)} listings" + (f" (filtered)" if filters else ""),
+                color=discord.Color.blue()
             )
 
-        if not paginator.pages:
-            await ctx.send("The market is empty or no listings matched your criteria."); return
+            listing_text = []
+            for listing in page_listings:
+                char = listing['character_data']
+                try:
+                    seller = await self.bot.fetch_user(listing['seller_id'])
+                    seller_name = seller.display_name[:12]
+                except discord.NotFound:
+                    seller_name = "Unknown"
 
-        for page in paginator.pages:
-            embed = discord.Embed(title="Player Market", description=page, color=discord.Color.blue())
+                listing_text.append(
+                    f"**#{listing['listing_id']}** | **{char['name']}** Lvl {char['level']} ({char['iv']}% IV)\n"
+                    f"💰 {listing['price']:,} coins | 👤 {seller_name}\n"
+                )
+
+            embed.description += "\n\n" + "\n".join(listing_text)
+            
+            if filters:
+                embed.set_footer(text=f"Filters: {filters} • Use reactions to navigate • !market buy <id>")
+            else:
+                embed.set_footer(text="Add filters: !market view name:Naruto level>50 price<5000 • Use reactions to navigate")
+            
+            return embed
+
+        if total_pages == 1:
+            embed = await create_market_embed(0)
             await ctx.send(embed=embed)
+            return
+
+        message = await ctx.send(embed=await create_market_embed(current_page))
+        await message.add_reaction('◀️')
+        await message.add_reaction('▶️')
+
+        def check(reaction, user):
+            return (user == ctx.author and 
+                   str(reaction.emoji) in ['◀️', '▶️'] and 
+                   reaction.message.id == message.id)
+
+        while True:
+            try:
+                reaction, user = await self.bot.wait_for('reaction_add', timeout=60.0, check=check)
+                
+                if str(reaction.emoji) == '▶️' and current_page < total_pages - 1:
+                    current_page += 1
+                elif str(reaction.emoji) == '◀️' and current_page > 0:
+                    current_page -= 1
+                
+                await message.edit(embed=await create_market_embed(current_page))
+                await message.remove_reaction(reaction, user)
+                
+            except asyncio.TimeoutError:
+                await message.clear_reactions()
+                break
             
     @market.command(name='buy', help="!market buy <listing_id> - Purchase a character.")
     async def market_buy(self, ctx, listing_id: int):

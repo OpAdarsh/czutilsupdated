@@ -76,6 +76,215 @@ class CharacterManagement(commands.Cog, name="Player Commands"):
         self.attacks = load_json_data('attacks.json')
         self.items = load_json_data('items.json')
 
+    def _apply_filters(self, characters, filter_string):
+        """Apply PokéTwo-style filters to character collection."""
+        if not filter_string:
+            return characters
+        
+        filtered = {}
+        for char_id, char_data in characters.items():
+            include = True
+            
+            # Split filters by spaces, but handle quoted strings
+            import shlex
+            try:
+                filter_parts = shlex.split(filter_string.lower())
+            except ValueError:
+                filter_parts = filter_string.lower().split()
+            
+            for filter_part in filter_parts:
+                if ':' in filter_part:
+                    # Handle key:value filters
+                    key, value = filter_part.split(':', 1)
+                    
+                    if key == 'name':
+                        if value not in char_data['name'].lower():
+                            include = False
+                            break
+                    elif key == 'level':
+                        if str(char_data['level']) != value:
+                            include = False
+                            break
+                    elif key == 'ability':
+                        if value not in char_data.get('ability', '').lower():
+                            include = False
+                            break
+                elif filter_part.startswith('level'):
+                    # Handle level comparisons
+                    if '>=' in filter_part:
+                        try:
+                            min_level = int(filter_part.split('>=')[1])
+                            if char_data['level'] < min_level:
+                                include = False
+                                break
+                        except (ValueError, IndexError):
+                            continue
+                    elif '<=' in filter_part:
+                        try:
+                            max_level = int(filter_part.split('<=')[1])
+                            if char_data['level'] > max_level:
+                                include = False
+                                break
+                        except (ValueError, IndexError):
+                            continue
+                    elif '>' in filter_part:
+                        try:
+                            min_level = int(filter_part.split('>')[1])
+                            if char_data['level'] <= min_level:
+                                include = False
+                                break
+                        except (ValueError, IndexError):
+                            continue
+                    elif '<' in filter_part:
+                        try:
+                            max_level = int(filter_part.split('<')[1])
+                            if char_data['level'] >= max_level:
+                                include = False
+                                break
+                        except (ValueError, IndexError):
+                            continue
+                elif filter_part.startswith('iv'):
+                    # Handle IV comparisons
+                    if '>=' in filter_part:
+                        try:
+                            min_iv = float(filter_part.split('>=')[1])
+                            if char_data['iv'] < min_iv:
+                                include = False
+                                break
+                        except (ValueError, IndexError):
+                            continue
+                    elif '<=' in filter_part:
+                        try:
+                            max_iv = float(filter_part.split('<=')[1])
+                            if char_data['iv'] > max_iv:
+                                include = False
+                                break
+                        except (ValueError, IndexError):
+                            continue
+                    elif '>' in filter_part:
+                        try:
+                            min_iv = float(filter_part.split('>')[1])
+                            if char_data['iv'] <= min_iv:
+                                include = False
+                                break
+                        except (ValueError, IndexError):
+                            continue
+                    elif '<' in filter_part:
+                        try:
+                            max_iv = float(filter_part.split('<')[1])
+                            if char_data['iv'] >= max_iv:
+                                include = False
+                                break
+                        except (ValueError, IndexError):
+                            continue
+                else:
+                    # Handle simple name filter
+                    if filter_part not in char_data['name'].lower():
+                        include = False
+                        break
+            
+            if include:
+                filtered[char_id] = char_data
+        
+        return filtered
+
+    def _apply_character_filters(self, characters, filter_string):
+        """Apply filters to the global character database."""
+        if not filter_string:
+            return characters
+        
+        filtered = {}
+        for char_name, char_data in characters.items():
+            include = True
+            
+            # Split filters by spaces, but handle quoted strings
+            import shlex
+            try:
+                filter_parts = shlex.split(filter_string.lower())
+            except ValueError:
+                filter_parts = filter_string.lower().split()
+            
+            for filter_part in filter_parts:
+                if ':' in filter_part:
+                    # Handle key:value filters
+                    key, value = filter_part.split(':', 1)
+                    
+                    if key == 'name':
+                        if value not in char_name.lower():
+                            include = False
+                            break
+                    elif key == 'ability':
+                        if value not in char_data.get('ability', '').lower():
+                            include = False
+                            break
+                elif filter_part.startswith(('atk', 'def', 'spd', 'sp_atk', 'sp_def', 'hp')):
+                    # Handle stat comparisons
+                    stat_name = None
+                    if filter_part.startswith('sp_atk'):
+                        stat_name = 'SP_ATK'
+                        comparison_part = filter_part[6:]
+                    elif filter_part.startswith('sp_def'):
+                        stat_name = 'SP_DEF'
+                        comparison_part = filter_part[6:]
+                    elif filter_part.startswith('atk'):
+                        stat_name = 'ATK'
+                        comparison_part = filter_part[3:]
+                    elif filter_part.startswith('def'):
+                        stat_name = 'DEF'
+                        comparison_part = filter_part[3:]
+                    elif filter_part.startswith('spd'):
+                        stat_name = 'SPD'
+                        comparison_part = filter_part[3:]
+                    elif filter_part.startswith('hp'):
+                        stat_name = 'HP'
+                        comparison_part = filter_part[2:]
+                    
+                    if stat_name and comparison_part:
+                        char_stat = char_data.get(stat_name, 0)
+                        
+                        if '>=' in comparison_part:
+                            try:
+                                min_val = int(comparison_part.split('>=')[1])
+                                if char_stat < min_val:
+                                    include = False
+                                    break
+                            except (ValueError, IndexError):
+                                continue
+                        elif '<=' in comparison_part:
+                            try:
+                                max_val = int(comparison_part.split('<=')[1])
+                                if char_stat > max_val:
+                                    include = False
+                                    break
+                            except (ValueError, IndexError):
+                                continue
+                        elif '>' in comparison_part:
+                            try:
+                                min_val = int(comparison_part.split('>')[1])
+                                if char_stat <= min_val:
+                                    include = False
+                                    break
+                            except (ValueError, IndexError):
+                                continue
+                        elif '<' in comparison_part:
+                            try:
+                                max_val = int(comparison_part.split('<')[1])
+                                if char_stat >= max_val:
+                                    include = False
+                                    break
+                            except (ValueError, IndexError):
+                                continue
+                else:
+                    # Handle simple name filter
+                    if filter_part not in char_name.lower():
+                        include = False
+                        break
+            
+            if include:
+                filtered[char_name] = char_data
+        
+        return filtered
+
     async def _find_character_from_input(self, ctx, player_data, identifier):
         """Finds a unique character from a player's collection by ID or name."""
         if identifier.isdigit():
@@ -271,39 +480,86 @@ class CharacterManagement(commands.Cog, name="Player Commands"):
         embed.add_field(name="Balance", value=f"💰 {player['coins']} coins", inline=False)
         await ctx.send(embed=embed)
 
-    @commands.command(name='allcharacters', aliases=['chars', 'characters'], help="!allcharacters [sort_key] - View all characters.", category="Gacha System")
+    @commands.command(name='allcharacters', aliases=['chars', 'characters'], help="!allcharacters [filters] - View all characters with optional filters.", category="Gacha System")
     @has_accepted_rules()
-    async def allcharacters(self, ctx, sort_by: str = "name"):
+    async def allcharacters(self, ctx, *, args: str = ""):
+        # Parse arguments for sort and filters
+        parts = args.strip().split() if args else []
+        sort_key = "name"
+        filters = ""
+        
         valid_sorts = ['atk', 'def', 'spd', 'sp_atk', 'sp_def', 'hp', 'name']
-        sort_key = sort_by.lower()
-        if sort_key not in valid_sorts:
-            await ctx.send(f"Invalid sort key. Use one of: `{'`, `'.join(valid_sorts)}`"); return
+        
+        # Check if first argument is a sort key
+        if parts and parts[0].lower() in valid_sorts:
+            sort_key = parts[0].lower()
+            filters = " ".join(parts[1:]) if len(parts) > 1 else ""
+        else:
+            filters = " ".join(parts)
 
-        char_list = list(self.characters.items())
-        sorted_chars = sorted(char_list, key=lambda i: i[0]) if sort_key == 'name' else sorted(char_list, key=lambda i: i[1].get(sort_key.upper(), 0), reverse=True)
+        # Apply filters to characters
+        filtered_chars = self._apply_character_filters(self.characters, filters)
+        
+        if not filtered_chars:
+            await ctx.send("No characters match your filters!"); return
 
-        pages = [sorted_chars[i:i + 10] for i in range(0, len(sorted_chars), 10)]
+        # Sort characters
+        char_list = list(filtered_chars.items())
+        if sort_key == 'name':
+            sorted_chars = sorted(char_list, key=lambda i: i[0])
+        else:
+            sorted_chars = sorted(char_list, key=lambda i: i[1].get(sort_key.upper(), 0), reverse=True)
+
+        # Pagination
+        chars_per_page = 10
+        total_pages = math.ceil(len(sorted_chars) / chars_per_page)
         current_page = 0
 
         def create_embed(page_num):
-            embed = discord.Embed(title=f"All Characters (Sorted by {sort_key.upper()})", description=f"Page {page_num + 1}/{len(pages)}", color=discord.Color.dark_teal())
-            for name, stats in pages[page_num]:
-                embed.add_field(name=name, value=f"`ATK:{stats['ATK']}|DEF:{stats['DEF']}|SPD:{stats['SPD']}|SP_ATK:{stats['SP_ATK']}|SP_DEF:{stats['SP_DEF']}|HP:{stats['HP']}`", inline=False)
+            start_idx = page_num * chars_per_page
+            end_idx = start_idx + chars_per_page
+            page_chars = sorted_chars[start_idx:end_idx]
+            
+            embed = discord.Embed(
+                title=f"All Characters (Sorted by {sort_key.upper()})",
+                description=f"Page {page_num + 1}/{total_pages} • {len(filtered_chars)} characters" + (f" (filtered)" if filters else ""),
+                color=discord.Color.dark_teal()
+            )
+            
+            for name, stats in page_chars:
+                stat_line = f"`ATK:{stats['ATK']}|DEF:{stats['DEF']}|SPD:{stats['SPD']}|SP_ATK:{stats['SP_ATK']}|SP_DEF:{stats['SP_DEF']}|HP:{stats['HP']}`"
+                embed.add_field(name=name, value=stat_line, inline=False)
+            
+            if filters:
+                embed.set_footer(text=f"Filters: {filters} • Use reactions to navigate")
+            else:
+                embed.set_footer(text="Add filters: !chars name:Naruto atk>100 • Use reactions to navigate")
+            
             return embed
 
-        message = await ctx.send(embed=create_embed(current_page))
-        await message.add_reaction('◀️'); await message.add_reaction('▶️')
+        if total_pages == 1:
+            await ctx.send(embed=create_embed(0))
+            return
 
-        def check(r, u): return u == ctx.author and str(r.emoji) in ['◀️', '▶️'] and r.message.id == message.id
+        message = await ctx.send(embed=create_embed(current_page))
+        await message.add_reaction('◀️')
+        await message.add_reaction('▶️')
+
+        def check(r, u): 
+            return u == ctx.author and str(r.emoji) in ['◀️', '▶️'] and r.message.id == message.id
 
         while True:
             try:
                 reaction, user = await self.bot.wait_for('reaction_add', timeout=60.0, check=check)
-                if str(reaction.emoji) == '▶️' and current_page < len(pages) - 1: current_page += 1
-                elif str(reaction.emoji) == '◀️' and current_page > 0: current_page -= 1
-                await message.edit(embed=create_embed(current_page)); await message.remove_reaction(reaction, user)
+                if str(reaction.emoji) == '▶️' and current_page < total_pages - 1: 
+                    current_page += 1
+                elif str(reaction.emoji) == '◀️' and current_page > 0: 
+                    current_page -= 1
+                await message.edit(embed=create_embed(current_page))
+                await message.remove_reaction(reaction, user)
             except asyncio.TimeoutError:
-                await message.clear_reactions(); break
+                await message.clear_reactions()
+                break
 
     @commands.command(name='info', aliases=['i'], help="!info [latest|id_or_name] - Shows info for a character.", category="Player Info")
     @has_accepted_rules()
@@ -365,18 +621,87 @@ class CharacterManagement(commands.Cog, name="Player Commands"):
         # Call the info command with "latest" as argument
         await self.info(ctx, identifier="latest")
 
-    @commands.command(name='collection', aliases=['col'], help="!collection - View your character collection.", category="Player Info")
+    @commands.command(name='collection', aliases=['col'], help="!collection [filters] - View your character collection with optional filters.", category="Player Info")
     @has_accepted_rules()
-    async def collection(self, ctx):
+    async def collection(self, ctx, *, filters: str = None):
         player = db.get_player(ctx.author.id)
         if not player['characters']:
             await ctx.send("Your collection is empty!"); return
 
-        embed = discord.Embed(title=f"{ctx.author.display_name}'s Collection", color=discord.Color.purple())
-        team_char_ids = [char_id for char_id in player.get('team', {}).values() if char_id is not None]
-        desc = "".join([f"`{cid}`: **Lvl {c['level']} {c['name']}** ({c['iv']}% IV) {'🛡️' if cid in team_char_ids else ''}{'⭐' if cid == player.get('selected_character_id') else ''}\n" for cid, c in player['characters'].items()])
-        embed.description = desc
-        await ctx.send(embed=embed)
+        # Apply filters
+        filtered_chars = self._apply_filters(player['characters'], filters)
+        
+        if not filtered_chars:
+            await ctx.send("No characters match your filters!"); return
+
+        # Sort characters by ID
+        sorted_chars = sorted(filtered_chars.items(), key=lambda x: x[0])
+        
+        # Pagination setup
+        chars_per_page = 10
+        total_pages = math.ceil(len(sorted_chars) / chars_per_page)
+        current_page = 0
+
+        def create_collection_embed(page_num):
+            start_idx = page_num * chars_per_page
+            end_idx = start_idx + chars_per_page
+            page_chars = sorted_chars[start_idx:end_idx]
+
+            embed = discord.Embed(
+                title=f"{ctx.author.display_name}'s Collection",
+                description=f"Page {page_num + 1}/{total_pages} • {len(filtered_chars)} characters" + (f" (filtered)" if filters else ""),
+                color=discord.Color.purple()
+            )
+
+            team_char_ids = [char_id for char_id in player.get('team', {}).values() if char_id is not None]
+            
+            char_list = []
+            for cid, char in page_chars:
+                indicators = ""
+                if cid in team_char_ids:
+                    indicators += "🛡️"
+                if cid == player.get('selected_character_id'):
+                    indicators += "⭐"
+                
+                char_list.append(f"`{cid}`: **Lvl {char['level']} {char['name']}** ({char['iv']}% IV) {indicators}")
+            
+            embed.description += "\n\n" + "\n".join(char_list)
+            
+            if filters:
+                embed.set_footer(text=f"Applied filters: {filters} • Use reactions to navigate")
+            else:
+                embed.set_footer(text="Use reactions to navigate • Add filters: !col name:Naruto level>50 iv>=80")
+            
+            return embed
+
+        if total_pages == 1:
+            await ctx.send(embed=create_collection_embed(0))
+            return
+
+        message = await ctx.send(embed=create_collection_embed(current_page))
+        await message.add_reaction('◀️')
+        await message.add_reaction('▶️')
+
+        def check(reaction, user):
+            return (user == ctx.author and 
+                   str(reaction.emoji) in ['◀️', '▶️'] and 
+                   reaction.message.id == message.id)
+
+        while True:
+            try:
+                reaction, user = await self.bot.wait_for('reaction_add', timeout=60.0, check=check)
+                
+                if str(reaction.emoji) == '▶️' and current_page < total_pages - 1:
+                    current_page += 1
+                elif str(reaction.emoji) == '◀️' and current_page > 0:
+                    current_page -= 1
+                
+                await message.edit(embed=create_collection_embed(current_page))
+                await message.remove_reaction(reaction, user)
+                
+            except asyncio.TimeoutError:
+                await message.clear_reactions()
+                break
 
     @commands.command(name='inventory', aliases=['inv'], help="!inventory - View your items.", category="Player Info")
     @has_accepted_rules()
