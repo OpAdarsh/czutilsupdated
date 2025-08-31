@@ -7,21 +7,21 @@ DATABASE_FILE = 'bot_database.db'
 
 def update_db_schema(cursor):
     """Checks for and applies necessary database schema updates."""
-    cursor.execute("PRAGMA table_info(players)")
-    columns = [column[1] for column in cursor.fetchall()]
-    
-    if 'last_pull_time' not in columns:
-        print("Updating database schema: Adding 'last_pull_time' column...")
-        cursor.execute("ALTER TABLE players ADD COLUMN last_pull_time REAL NOT NULL DEFAULT 0")
-        print("Schema update complete.")
+    try:
+        cursor.execute("PRAGMA table_info(players)")
+        columns = [column[1] for column in cursor.fetchall()]
+        
+        if 'last_pull_time' not in columns:
+            print("Updating database schema: Adding 'last_pull_time' column...")
+            cursor.execute("ALTER TABLE players ADD COLUMN last_pull_time REAL NOT NULL DEFAULT 0")
+            print("Schema update complete.")
+    except sqlite3.Error as e:
+        print(f"Schema update error (likely column already exists): {e}")
 
 def init_db():
     """Initializes the database and creates/updates tables as needed."""
     conn = sqlite3.connect(DATABASE_FILE)
     cursor = conn.cursor()
-    
-    # Run schema update first to prevent errors on startup
-    update_db_schema(cursor)
     
     # --- Players Table ---
     cursor.execute('''
@@ -41,6 +41,9 @@ def init_db():
             last_pull_time REAL NOT NULL DEFAULT 0
         )
     ''')
+    
+    # Run schema update after table creation
+    update_db_schema(cursor)
     
     # --- Market Table ---
     cursor.execute('''
