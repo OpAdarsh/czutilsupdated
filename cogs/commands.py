@@ -422,18 +422,53 @@ class CharacterManagement(commands.Cog, name="Player Commands"):
             embed.set_footer(text="Get items from Item Boxes in the shop!")
             await ctx.send(embed=embed)
 
-    @commands.command(name='select', help="!select <id_or_name> - Select your active character.", category="Gacha System")
+    @commands.command(name='select', help="!select <id_or_name> - Select your active character from your collection.", category="Gacha System")
     @has_accepted_rules()
     async def select(self, ctx, *, identifier: str):
         player = db.get_player(ctx.author.id)
+        
+        # Check if collection is empty
+        if not player['characters']:
+            await ctx.send("❌ **Your collection is empty!** Use `!pull` to get characters first.")
+            return
+        
+        # Handle ID-based selection specifically
+        if identifier.isdigit():
+            char_id = int(identifier)
+            if char_id not in player['characters']:
+                # Show available character IDs for better user experience
+                available_ids = ", ".join([f"`{cid}`" for cid in player['characters'].keys()])
+                await ctx.send(f"❌ **Character ID `{char_id}` not found in your collection.**\n"
+                             f"💡 Available character IDs: {available_ids}\n"
+                             f"🔍 Use `!collection` to see all your characters.")
+                return
+            
+            selected_char = player['characters'][char_id]
+            player['selected_character_id'] = char_id
+            db.update_player(ctx.author.id, player)
+            await ctx.send(f"✅ **Selected:** {selected_char['name']} (ID: {char_id}) - Level {selected_char['level']}, {selected_char['iv']}% IV\n"
+                          f"⭐ This character will now gain XP as you chat!")
+            return
+        
+        # Handle name-based selection
         char_id = await self._find_character_from_input(ctx, player, identifier)
-        if char_id is None: return
+        if char_id is None: 
+            # Show some helpful suggestions
+            char_names = [char['name'] for char in player['characters'].values()]
+            if len(char_names) <= 5:
+                suggestions = ", ".join([f"`{name}`" for name in char_names])
+                await ctx.send(f"💡 **Available characters:** {suggestions}")
+            else:
+                await ctx.send("🔍 Use `!collection` to see all your characters and their IDs.")
+            return
 
         # Ensure char_id is integer
         char_id = int(char_id)
+        selected_char = player['characters'][char_id]
         player['selected_character_id'] = char_id
         db.update_player(ctx.author.id, player)
-        await ctx.send(f"✅ You have selected **{player['characters'][char_id]['name']}** (ID: {char_id}) to gain XP.")
+        await ctx.send(f"✅ **Selected:** {selected_char['name']} (ID: {char_id}) - Level {selected_char['level']}, {selected_char['iv']}% IV\n"
+                      f"⭐ This character will now gain XP as you chat!")
 
     @commands.group(name='team', aliases=['t'], invoke_without_command=True, help="!team - Manages your 3-slot team.", category="Team Management")
     @has_accepted_rules()
