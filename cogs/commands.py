@@ -857,7 +857,18 @@ class CharacterManagement(commands.Cog, name="Player Commands"):
         # Check if user has selected a character
         char_id = player.get('selected_character_id')
         if not char_id:
-            await ctx.send("❌ **No character selected!** Use `!select <character>` first to choose which character should learn the move.")
+            # Show user's characters if they have any
+            if player['characters']:
+                char_list = []
+                for cid, char in list(player['characters'].items())[:5]:  # Show first 5
+                    char_list.append(f"`{cid}` - {char['name']} (Lvl {char['level']})")
+                char_display = "\n".join(char_list)
+                if len(player['characters']) > 5:
+                    char_display += f"\n... and {len(player['characters']) - 5} more"
+                
+                await ctx.send(f"❌ **No character selected!** Use `!select <character_id>` first to choose which character should learn the move.\n\n**Your Characters:**\n{char_display}")
+            else:
+                await ctx.send("❌ **No character selected!** You don't have any characters yet. Use `!pull` to get your first character, then `!select <character_id>` to select it.")
             return
 
         if char_id not in player['characters']:
