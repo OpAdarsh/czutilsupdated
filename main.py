@@ -3,6 +3,8 @@ from discord.ext import commands
 import os
 import json
 import asyncio
+from flask import Flask
+import threading
 
 # --- Configuration Loading ---
 def load_config():
@@ -15,11 +17,11 @@ def load_config():
         exit()
 
 config = load_config()
-TOKEN = config.get('TOKEN')
+TOKEN = os.getenv('DISCORD_TOKEN') or config.get('TOKEN')
 PREFIX = config.get('PREFIX')
 
 if not TOKEN or not PREFIX:
-    print("❌ 'TOKEN' and 'PREFIX' must be set in config.json.")
+    print("❌ 'TOKEN' must be set as environment variable DISCORD_TOKEN or in config.json, and 'PREFIX' must be set in config.json.")
     exit()
 
 # --- Bot Setup ---
@@ -37,12 +39,79 @@ bot = commands.Bot(
 )
 
 # Attach config to the bot object for easy access in cogs
-bot.config = config 
+bot.config = config
+
+# --- Flask Web Server ---
+app = Flask(__name__)
+
+@app.route('/')
+def alive():
+    return '''
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Bot Status</title>
+        <style>
+            body { 
+                font-family: Arial, sans-serif; 
+                text-align: center; 
+                margin-top: 50px;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                color: white;
+                min-height: 100vh;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                flex-direction: column;
+            }
+            .status-box {
+                background: rgba(255,255,255,0.1);
+                padding: 40px;
+                border-radius: 15px;
+                backdrop-filter: blur(10px);
+                box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            }
+            h1 { 
+                font-size: 3em; 
+                margin-bottom: 20px;
+                text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            }
+            .pulse {
+                animation: pulse 2s infinite;
+            }
+            @keyframes pulse {
+                0% { opacity: 1; }
+                50% { opacity: 0.7; }
+                100% { opacity: 1; }
+            }
+        </style>
+    </head>
+    <body>
+        <div class="status-box">
+            <h1 class="pulse">🤖 I'm Alive!</h1>
+            <p>Discord Bot is running successfully</p>
+            <p>✅ All systems operational</p>
+        </div>
+    </body>
+    </html>
+    '''
+
+def run_flask():
+    """Run Flask server in a separate thread."""
+    import logging
+    # Disable Flask's default logging
+    log = logging.getLogger('werkzeug')
+    log.setLevel(logging.ERROR)
+    app.run(host='0.0.0.0', port=5000, debug=False) 
 
 @bot.event
 async def on_ready():
     """Called when the bot is ready and has connected to Discord."""
     print(f"✅ Logged in as {bot.user.name} ({bot.user.id})")
+    
+    # Initialize database before loading cogs
+    import database as db
+    db.init_db()
     
     # --- Cog Loading ---
     # Automatically load all .py files from the 'cogs' directory.
@@ -66,6 +135,12 @@ async def on_ready():
 
 async def main():
     """Main async function to start the bot."""
+    # Start Flask server in a separate thread
+    flask_thread = threading.Thread(target=run_flask)
+    flask_thread.daemon = True
+    flask_thread.start()
+    print("✅ Web server started on http://0.0.0.0:5000")
+    
     async with bot:
         await bot.start(TOKEN)
 
