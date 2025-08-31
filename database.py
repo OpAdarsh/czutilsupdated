@@ -15,6 +15,11 @@ def update_db_schema(cursor):
             print("Updating database schema: Adding 'last_pull_time' column...")
             cursor.execute("ALTER TABLE players ADD COLUMN last_pull_time REAL NOT NULL DEFAULT 0")
             print("Schema update complete.")
+            
+        if 'rank_points' not in columns:
+            print("Updating database schema: Adding 'rank_points' column...")
+            cursor.execute("ALTER TABLE players ADD COLUMN rank_points INTEGER NOT NULL DEFAULT 0")
+            print("Schema update complete.")
     except sqlite3.Error as e:
         print(f"Schema update error (likely column already exists): {e}")
 
@@ -38,7 +43,8 @@ def init_db():
             last_daily_date TEXT,
             daily_streak INTEGER NOT NULL DEFAULT 0,
             rules_accepted INTEGER NOT NULL DEFAULT 0,
-            last_pull_time REAL NOT NULL DEFAULT 0
+            last_pull_time REAL NOT NULL DEFAULT 0,
+            rank_points INTEGER NOT NULL DEFAULT 0
         )
     ''')
     
@@ -85,7 +91,8 @@ def get_player(user_id):
             "last_daily_date": player_row['last_daily_date'],
             "daily_streak": player_row['daily_streak'], 
             "rules_accepted": player_row['rules_accepted'],
-            "last_pull_time": player_row['last_pull_time']
+            "last_pull_time": player_row['last_pull_time'],
+            "rank_points": player_row['rank_points']
         }
         player_data['characters'] = {int(k): v for k, v in player_data['characters'].items()}
     else:
@@ -97,7 +104,7 @@ def get_player(user_id):
             "latest_pull_id": None, "selected_character_id": None, 
             "next_character_id": 1, "last_xp_gain_time": 0, 
             "last_daily_date": None, "daily_streak": 0, "rules_accepted": 0,
-            "last_pull_time": 0
+            "last_pull_time": 0, "rank_points": 0
         }
         
     conn.close()
@@ -118,14 +125,14 @@ def update_player(user_id, data):
         UPDATE players
         SET coins = ?, characters = ?, inventory = ?, team = ?, latest_pull_id = ?,
             selected_character_id = ?, next_character_id = ?, last_xp_gain_time = ?,
-            last_daily_date = ?, daily_streak = ?, rules_accepted = ?, last_pull_time = ?
+            last_daily_date = ?, daily_streak = ?, rules_accepted = ?, last_pull_time = ?, rank_points = ?
         WHERE user_id = ?
     ''', (
         data.get("coins", 500), characters_str, inventory_str, team_str,
         data.get("latest_pull_id"), data.get("selected_character_id"),
         data.get("next_character_id", 1), data.get("last_xp_gain_time", 0),
         data.get("last_daily_date"), data.get("daily_streak", 0),
-        data.get("rules_accepted", 0), data.get("last_pull_time", 0),
+        data.get("rules_accepted", 0), data.get("last_pull_time", 0), data.get("rank_points", 0),
         user_id
     ))
     
@@ -141,7 +148,7 @@ def reset_player(user_id):
         UPDATE players
         SET coins = 500, characters = '{}', inventory = '{}', team = '{}', 
             latest_pull_id = NULL, selected_character_id = NULL, next_character_id = 1, 
-            last_xp_gain_time = 0, last_daily_date = NULL, daily_streak = 0, last_pull_time = 0
+            last_xp_gain_time = 0, last_daily_date = NULL, daily_streak = 0, last_pull_time = 0, rank_points = 0
         WHERE user_id = ?
     ''', (user_id,))
     conn.commit()
@@ -220,3 +227,28 @@ def get_all_market_listings():
         })
     return listings
 
+def get_leaderboard(limit=10):
+    """Fetches the top players by rank points for the leaderboard."""
+    conn = sqlite3.connect(DATABASE_FILE)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    
+    cursor.execute("""
+        SELECT user_id, rank_points 
+        FROM players 
+        WHERE rank_points > 0 
+        ORDER BY rank_points DESC 
+        LIMIT ?
+    """, (limit,))
+    
+    rows = cursor.fetchall()
+    conn.close()
+    
+    leaderboard = []
+    for row in rows:
+        leaderboard.append({
+            "user_id": row['user_id'],
+            "rank_points": row['rank_points']
+        })
+    
+    return leaderboard

@@ -45,6 +45,7 @@ class BattleAI(commands.Cog, name="AI Battle"):
         self.active_battles = set()
         self.characters = load_json_data('characters.json')
         self.attacks = load_json_data('attacks.json')
+        self.ranks = load_json_data('ranks.json')
         
     def get_character_attacks(self, character):
         """Fetches the list of available attacks for a character instance."""
@@ -351,17 +352,50 @@ class BattleAI(commands.Cog, name="AI Battle"):
             
             final_embed = self._create_battle_embed(log, user_team, bot_team, user, self.bot.user, user_active_char, bot_active_char)
             player = db.get_player(user.id)
+            
+            # Calculate rank changes
+            old_rp = player.get('rank_points', 0)
+            old_rank, old_rank_data = self.get_player_rank(old_rp)
+            
             if winner_is_user:
-                final_embed.title = "🏆 You Won! 🏆"
-                final_embed.description = "You defeated the AI and earned **50** coins!"
-                player['coins'] += 50
+                rp_change = self.calculate_rp_change(old_rp, avg_level * 100, True)  # Bot strength based on level
+                coin_reward = old_rank_data['coin_bonus']
+                
+                player['rank_points'] = max(0, old_rp + rp_change)
+                player['coins'] += coin_reward
+                
+                new_rank, new_rank_data = self.get_player_rank(player['rank_points'])
+                
+                final_embed.title = "🏆 Victory! 🏆"
+                final_embed.description = f"You defeated the AI!\n"
+                final_embed.description += f"**Coins:** +{coin_reward} 💰\n"
+                final_embed.description += f"**Rank Points:** +{rp_change} RP 📈\n"
+                final_embed.description += f"**Rank:** {old_rank} → {new_rank}"
+                
+                if new_rank != old_rank:
+                    final_embed.description += f"\n🎉 **RANK UP!** Welcome to {new_rank}!"
+                    final_embed.color = discord.Color.from_str(f"#{new_rank_data['color']}")
             else:
-                final_embed.title = "☠️ You Lost! ☠️"
-                final_embed.description = "The AI was victorious. You lost **20** coins."
-                player['coins'] -= 20
+                rp_change = self.calculate_rp_change(old_rp, avg_level * 100, False)
+                coin_loss = 20
+                
+                player['rank_points'] = max(0, old_rp + rp_change)  # rp_change is negative
+                player['coins'] = max(0, player['coins'] - coin_loss)
+                
+                new_rank, new_rank_data = self.get_player_rank(player['rank_points'])
+                
+                final_embed.title = "☠️ Defeat ☠️"
+                final_embed.description = f"The AI was victorious.\n"
+                final_embed.description += f"**Coins:** -{coin_loss} 💸\n"
+                final_embed.description += f"**Rank Points:** {rp_change} RP 📉\n"
+                final_embed.description += f"**Rank:** {old_rank} → {new_rank}"
+                
+                if new_rank != old_rank:
+                    final_embed.description += f"\n😞 **RANK DOWN** to {new_rank}"
+                    final_embed.color = discord.Color.from_str(f"#{new_rank_data['color']}")
             
             db.update_player(user.id, player)
-            final_embed.set_footer(text=f"Your new balance: {player['coins']} coins")
+            final_embed.set_footer(text=f"Balance: {player['coins']} coins | RP: {player['rank_points']} ({new_rank})")
             await battle_message.edit(embed=final_embed, view=None)
         
         except Exception as e:
@@ -372,22 +406,25 @@ class BattleAI(commands.Cog, name="AI Battle"):
             self.active_battles.remove(user.id)
 
     def _create_hp_bar(self, current, max_val, length=12):
-        if max_val <= 0: return f"`[{' ' * length}]` 0%"
+        if max_val <= 0: return f"`{'░' * length}` 0%"
         percent = max(0, min(1, current / max_val))
         filled_length = int(length * percent)
         
-        # Color coding based on HP percentage
+        # Better visibility for both dark and light themes
         if percent > 0.7:
-            bar_char = '🟩'
+            bar_char = '█'  # Full block - green zone
+            color_indicator = '🟢'
         elif percent > 0.3:
-            bar_char = '🟨'
+            bar_char = '▓'  # Dark shade - yellow zone  
+            color_indicator = '🟡'
         else:
-            bar_char = '🟥'
+            bar_char = '▒'  # Medium shade - red zone
+            color_indicator = '🔴'
             
-        empty_char = '⬜'
+        empty_char = '░'  # Light shade for empty
         bar = bar_char * filled_length + empty_char * (length - filled_length)
         percentage = int(percent * 100)
-        return f"{bar} {percentage}%"
+        return f"{color_indicator}`{bar}` {percentage}%"
 
     def _create_battle_embed(self, log, t1, t2, p1_user, p2_user, p1_active, p2_active, footer_text=None):
         embed = discord.Embed(title=f"⚔️ {p1_user.display_name} vs {p2_user.display_name}", color=discord.Color.red())
@@ -451,3 +488,27 @@ class BattleAI(commands.Cog, name="AI Battle"):
 async def setup(bot):
     await bot.add_cog(BattleAI(bot))
 
+def get_player_rank(self, rank_points):
+        """Returns the player's current rank tier based on rank points."""
+        for rank_name, rank_data in self.ranks['tiers'].items():
+            if rank_data['min_rp'] <= rank_points <= rank_data['max_rp']:
+                return rank_name, rank_data
+        return "Bronze", self.ranks['tiers']['Bronze']  # Default fallback
+
+    def calculate_rp_change(self, winner_rp, loser_rp, won):
+        """Calculates rank point changes based on current ranks and outcome."""
+        winner_rank, winner_data = self.get_player_rank(winner_rp)
+        loser_rank, loser_data = self.get_player_rank(loser_rp)
+        
+        if won:
+            base_rp = winner_data['win_rp']
+            # Reduce RP gain if fighting lower ranked opponents
+            if winner_rp > loser_rp + 500:
+                base_rp = max(5, base_rp - 5)
+            return base_rp
+        else:
+            base_rp = winner_data['loss_rp']
+            # Reduce RP loss if fighting higher ranked opponents
+            if loser_rp > winner_rp + 500:
+                base_rp = max(-5, base_rp + 5)
+            return base_rp

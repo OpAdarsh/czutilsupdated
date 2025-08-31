@@ -1,0 +1,53 @@
+
+{
+  "tiers": {
+    "Bronze": {
+      "min_rp": 0,
+      "max_rp": 999,
+      "win_rp": 25,
+      "loss_rp": -10,
+      "coin_bonus": 20,
+      "color": "cd7f32"
+    },
+    "Silver": {
+      "min_rp": 1000,
+      "max_rp": 1999,
+      "win_rp": 20,
+      "loss_rp": -15,
+      "coin_bonus": 35,
+      "color": "c0c0c0"
+    },
+    "Gold": {
+      "min_rp": 2000,
+      "max_rp": 2999,
+      "win_rp": 18,
+      "loss_rp": -18,
+      "coin_bonus": 50,
+      "color": "ffd700"
+    },
+    "Platinum": {
+      "min_rp": 3000,
+      "max_rp": 3999,
+      "win_rp": 15,
+      "loss_rp": -20,
+      "coin_bonus": 65,
+      "color": "e5e4e2"
+    },
+    "Diamond": {
+      "min_rp": 4000,
+      "max_rp": 4999,
+      "win_rp": 12,
+      "loss_rp": -22,
+      "coin_bonus": 80,
+      "color": "b9f2ff"
+    },
+    "Master": {
+      "min_rp": 5000,
+      "max_rp": 9999,
+      "win_rp": 10,
+      "loss_rp": -25,
+      "coin_bonus": 100,
+      "color": "ff6b6b"
+    }
+  }
+}

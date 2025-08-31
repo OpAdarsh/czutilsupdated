@@ -1036,3 +1036,85 @@ class CharacterManagement(commands.Cog, name="Player Commands"):
 
 async def setup(bot):
     await bot.add_cog(CharacterManagement(bot))
+
+    @commands.command(name='leaderboard', aliases=['lb'], help="!leaderboard - Shows the top ranked players.", category="Info")
+    @has_accepted_rules()
+    async def leaderboard(self, ctx):
+        """Display the leaderboard of top ranked players."""
+        leaderboard_data = db.get_leaderboard(15)  # Top 15 players
+        
+        if not leaderboard_data:
+            await ctx.send("🏆 **No ranked players yet!** Start battling AI opponents to earn rank points!")
+            return
+        
+        # Load rank system
+        try:
+            ranks_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'ranks.json')
+            with open(ranks_path, 'r', encoding='utf-8') as f:
+                ranks = json.load(f)
+        except:
+            await ctx.send("❌ Rank system data not available.")
+            return
+            
+        def get_player_rank(rp):
+            for rank_name, rank_data in ranks['tiers'].items():
+                if rank_data['min_rp'] <= rp <= rank_data['max_rp']:
+                    return rank_name, rank_data
+            return "Bronze", ranks['tiers']['Bronze']
+        
+        embed = discord.Embed(
+            title="🏆 CZ Battle Leaderboard",
+            description="Top ranked players in AI battles",
+            color=discord.Color.gold()
+        )
+        
+        leaderboard_text = ""
+        for i, entry in enumerate(leaderboard_data, 1):
+            try:
+                user = await self.bot.fetch_user(entry['user_id'])
+                user_name = user.display_name[:15] if user else f"User #{entry['user_id']}"
+            except:
+                user_name = f"User #{entry['user_id']}"
+            
+            rank_name, rank_data = get_player_rank(entry['rank_points'])
+            
+            # Position emojis
+            if i == 1:
+                position = "🥇"
+            elif i == 2:
+                position = "🥈"
+            elif i == 3:
+                position = "🥉"
+            else:
+                position = f"**{i}.**"
+            
+            # Rank badges
+            rank_badges = {
+                "Bronze": "🥉",
+                "Silver": "🥈", 
+                "Gold": "🥇",
+                "Platinum": "💎",
+                "Diamond": "💠",
+                "Master": "👑"
+            }
+            
+            rank_badge = rank_badges.get(rank_name, "🔰")
+            
+            leaderboard_text += f"{position} {rank_badge} **{user_name}**\n"
+            leaderboard_text += f"     `{entry['rank_points']} RP • {rank_name}`\n\n"
+        
+        # Show current user's position if not in top 15
+        if ctx.author.id not in [entry['user_id'] for entry in leaderboard_data]:
+            player = db.get_player(ctx.author.id)
+            user_rp = player.get('rank_points', 0)
+            if user_rp > 0:
+                user_rank, _ = get_player_rank(user_rp)
+                user_badge = rank_badges.get(user_rank, "🔰")
+                leaderboard_text += f"━━━━━━━━━━━━━━━━━━━━━━━━\n"
+                leaderboard_text += f"📍 {user_badge} **{ctx.author.display_name}**\n"
+                leaderboard_text += f"     `{user_rp} RP • {user_rank}`"
+        
+        embed.description = f"```{leaderboard_text}```"
+        embed.set_footer(text="Battle AI opponents to earn Rank Points!")
+        
+        await ctx.send(embed=embed)
