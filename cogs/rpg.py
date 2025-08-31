@@ -34,13 +34,13 @@ def has_accepted_rules():
         cog = ctx.bot.get_cog('Core Gameplay')
         if not cog:
             return False
-        
+
         # Check if user already has a pending rules prompt
         if ctx.author.id in cog.rules_prompts.values():
             return False
 
         embed = discord.Embed(
-            title="⚔️ Welcome to the CZ Game! ⚔️",
+            title="⚔️ Welcome to the CZ Game ⚔️",
             description="Before you begin your adventure, you must accept the rules.",
             color=discord.Color.gold()
         )
@@ -60,9 +60,9 @@ def has_accepted_rules():
 
         prompt_message = await ctx.send(embed=embed)
         await prompt_message.add_reaction('✅')
-        
+
         cog.rules_prompts[prompt_message.id] = ctx.author.id
-        
+
         await ctx.send("Please accept the rules above to continue.", delete_after=10)
         return False
 
@@ -83,15 +83,15 @@ class CZ(commands.Cog, name="Core Gameplay"):
     async def on_reaction_add(self, reaction, user):
         if user.bot or reaction.message.id not in self.rules_prompts or self.rules_prompts[reaction.message.id] != user.id:
             return
-        
+
         if str(reaction.emoji) == '✅':
             player = db.get_player(user.id)
             player['rules_accepted'] = 1
             db.update_player(user.id, player)
-            
+
             del self.rules_prompts[reaction.message.id]
             await reaction.message.delete()
-            
+
             await user.send("✅ Thank you for accepting the rules! You can now use all CZ game commands.")
 
     def _get_xp_for_next_level(self, level):
@@ -105,9 +105,9 @@ class CZ(commands.Cog, name="Core Gameplay"):
 
         stat_keys = ['HP', 'ATK', 'DEF', 'SPD', 'SP_ATK', 'SP_DEF']
         base_stats = {k: v for k, v in base_character.items() if k in stat_keys}
-        
+
         individual_ivs = stats_cog._generate_ivs_with_distribution(list(base_stats.keys()))
-        
+
         total_iv_points = sum(individual_ivs.values())
         max_possible_iv_points = 31 * len(base_stats)
         iv_percentage = round((total_iv_points / max_possible_iv_points) * 100, 2) if max_possible_iv_points > 0 else 0
@@ -117,17 +117,17 @@ class CZ(commands.Cog, name="Core Gameplay"):
         common_moves = [move['name'] for move in self.attacks.get('physical', [])[:1]] + [move['name'] for move in self.attacks.get('special', [])[:1]]
         char_id_str = str(base_character.get('id'))
         first_special = next((move['name'] for move in self.attacks.get('characters', {}).get(char_id_str, []) if move.get('unlock_level', 1) <= 1), None)
-        
+
         initial_moveset = common_moves
         if first_special: initial_moveset.append(first_special)
-        
+
         return {
             "id": base_character.get('id'), "name": base_character['name'], "iv": iv_percentage, "stats": instance_stats,
             "ability": base_character['Ability'], "description": base_character['Description'],
             "equipped_item": None, "level": 1, "xp": 0, "moveset": initial_moveset,
             "individual_ivs": individual_ivs
         }
-        
+
     def get_character_attacks(self, character):
         active_moves = character.get('moveset', [])
         all_possible_moves = self.attacks.get('physical', []) + self.attacks.get('special', []) + self.attacks.get('characters', {}).get(str(character.get('id')), [])
@@ -153,7 +153,7 @@ class CZ(commands.Cog, name="Core Gameplay"):
         async def on_timeout(self):
             if self.available_attacks: self.chosen_attack = self.available_attacks[0]
             self.stop()
-            
+
     class CharacterSelectView(discord.ui.View):
         def __init__(self, author, team):
             super().__init__(timeout=120.0)
@@ -179,10 +179,10 @@ class CZ(commands.Cog, name="Core Gameplay"):
             super().__init__(timeout=30.0)
             self.opponent = opponent
             self.agreed = False
-        
+
         async def interaction_check(self, interaction: discord.Interaction) -> bool:
             return interaction.user.id == self.opponent.id
-        
+
         @discord.ui.button(label="Agree to End", style=discord.ButtonStyle.green)
         async def agree(self, interaction: discord.Interaction, button: discord.ui.Button):
             self.agreed = True
@@ -202,20 +202,20 @@ class CZ(commands.Cog, name="Core Gameplay"):
             await ctx.send("You can't challenge yourself!"); return
         if opponent.bot:
             await ctx.send("You cannot battle bots with this command. Use `!battlecz` to fight an AI."); return
-        
+
         battle_key = tuple(sorted((challenger.id, opponent.id)))
         if battle_key in self.active_battles:
             await ctx.send("One of you is already in a battle!"); return
-        
+
         challenger_player, opponent_player = db.get_player(challenger.id), db.get_player(opponent.id)
         if not challenger_player['team']:
             await ctx.send("You need a team first."); return
         if not opponent_player['team']:
             await ctx.send(f"{opponent.display_name} does not have a team."); return
-        
+
         req_msg = await ctx.send(f"{opponent.mention}, you've been challenged by {challenger.display_name}! React with ✅ to accept.")
         await req_msg.add_reaction('✅'); await req_msg.add_reaction('❌')
-        
+
         def check(r, u): return u == opponent and str(r.emoji) in ['✅', '❌'] and r.message.id == req_msg.id
         try:
             reaction, _ = await self.bot.wait_for('reaction_add', timeout=60.0, check=check)
@@ -223,9 +223,9 @@ class CZ(commands.Cog, name="Core Gameplay"):
                 await req_msg.edit(content=f"{opponent.display_name} declined the battle."); return
         except asyncio.TimeoutError:
             await req_msg.edit(content="Battle request timed out."); return
-        
+
         await req_msg.delete()
-        
+
         task = asyncio.create_task(self._run_interactive_battle(ctx, challenger, opponent, challenger_player, opponent_player))
         self.active_battles[battle_key] = {"task": task, "channel": ctx.channel}
 
@@ -233,7 +233,7 @@ class CZ(commands.Cog, name="Core Gameplay"):
         """Prompts a player for their attack via DM."""
         available_attacks = self.get_character_attacks(active_char)
         view = self.BattleView(user, available_attacks)
-        
+
         try:
             prompt_msg = await user.send(f"Choose an attack for **{active_char['name']}**.", view=view)
         except discord.Forbidden:
@@ -243,19 +243,19 @@ class CZ(commands.Cog, name="Core Gameplay"):
         return view.chosen_attack
 
     async def _prompt_character_selection(self, user, team, ctx, prompt_text):
-        """Helper to prompt a user to select a character via DM."""
+        if not team:
+            return None
+
         view = self.CharacterSelectView(user, team)
         embed = discord.Embed(title="Character Selection", description=prompt_text, color=user.color or discord.Color.default())
-        
-        try:
-            prompt_message = await user.send(embed=embed, view=view)
-        except discord.Forbidden:
-            prompt_message = await ctx.send(content=user.mention, embed=embed, view=view)
+        prompt_message = await ctx.send(content=user.mention, embed=embed, view=view)
 
         await view.wait()
-        try: await prompt_message.delete()
-        except discord.NotFound: pass
-        
+        try: 
+            await prompt_message.delete()
+        except discord.NotFound: 
+            pass
+
         return view.selected_character
 
     async def _run_interactive_battle(self, ctx, p1_user, p2_user, p1_data, p2_data):
@@ -265,7 +265,7 @@ class CZ(commands.Cog, name="Core Gameplay"):
 
         battle_key = tuple(sorted((p1_user.id, p2_user.id)))
         battle_message = None
-        
+
         try:
             def prep_team(player_data):
                 team = []
@@ -278,14 +278,18 @@ class CZ(commands.Cog, name="Core Gameplay"):
 
             team1, team2 = prep_team(p1_data), prep_team(p2_data)
             players = {p1_user.id: {"team": team1, "user": p1_user}, p2_user.id: {"team": team2, "user": p2_user}}
-            
+
             p1_active_char_task = self._prompt_character_selection(p1_user, team1, ctx, f"Choose your starting character!")
             p2_active_char_task = self._prompt_character_selection(p2_user, team2, ctx, f"Choose your starting character!")
             p1_active_char, p2_active_char = await asyncio.gather(p1_active_char_task, p2_active_char_task)
-            
+
+            if p1_active_char is None or p2_active_char is None:
+                await ctx.send("A player failed to select a character, battle cancelled.")
+                return
+
             players[p1_user.id]["active"] = p1_active_char
             players[p2_user.id]["active"] = p2_active_char
-            
+
             log = [f"{p1_user.display_name} sends out **{p1_active_char['name']}**!", f"{p2_user.display_name} sends out **{p2_active_char['name']}**!"]
             battle_message = await ctx.send(embed=self._create_battle_embed(log, team1, team2, p1_user, p2_user, p1_active_char, p2_active_char))
 
@@ -302,11 +306,11 @@ class CZ(commands.Cog, name="Core Gameplay"):
                     {'user_id': p2_user.id, 'attack': p2_action, 'active': p2_active_char, 'target': p1_active_char}
                 ]
                 actions.sort(key=lambda x: x['active']['stats']['SPD'], reverse=True)
-                
+
                 for turn_data in actions:
                     attacker_player = players[turn_data['user_id']]
                     if attacker_player['active']['current_hp'] <= 0: continue
-                    
+
                     defender = turn_data['target']
                     if defender['current_hp'] <= 0:
                         log.append(f"▶️ {attacker_player['active']['name']}'s target was already defeated!"); continue
@@ -322,14 +326,14 @@ class CZ(commands.Cog, name="Core Gameplay"):
                         dmg = stats_cog.calculate_damage(attacker_player['active'], defender, chosen_attack)
                         defender['current_hp'] = max(0, defender['current_hp'] - dmg['damage'])
                         log.append(f"💥 It hits for **{dmg['damage']}** damage!{' **CRITICAL HIT!**' if dmg['crit'] else ''}")
-                        
+
                         if defender['current_hp'] == 0:
                             log.append(f"💀 {defender['name']} has been defeated!")
-                            
+
                             opponent_id = p2_user.id if turn_data['user_id'] == p1_user.id else p1_user.id
                             remaining = [c for c in players[opponent_id]['team'] if c['current_hp'] > 0]
                             if not remaining: break
-                            
+
                             new_char = await self._prompt_character_selection(players[opponent_id]['user'], remaining, ctx, "Your character fainted! Choose your next one.")
                             players[opponent_id]['active'] = new_char
                             if opponent_id == p1_user.id: p1_active_char = new_char
@@ -344,7 +348,7 @@ class CZ(commands.Cog, name="Core Gameplay"):
             final_embed = self._create_battle_embed(log, team1, team2, p1_user, p2_user, p1_active_char, p2_active_char)
             final_embed.title = f"🏆 Winner: {winner.display_name}! 🏆"
             await battle_message.edit(embed=final_embed, view=None)
-        
+
         except asyncio.CancelledError:
             log.append("Battle ended by mutual agreement.")
             final_embed = self._create_battle_embed(log, team1, team2, p1_user, p2_user, p1_active_char, p2_active_char)
@@ -354,7 +358,7 @@ class CZ(commands.Cog, name="Core Gameplay"):
         except Exception as e:
             print(f"An error occurred during battle: {e}")
             await ctx.send("An unexpected error occurred and the battle has been cancelled.")
-        
+
         finally:
             if battle_key in self.active_battles:
                 del self.active_battles[battle_key]
@@ -368,7 +372,7 @@ class CZ(commands.Cog, name="Core Gameplay"):
 
     def _create_battle_embed(self, log, t1, t2, p1_user, p2_user, p1_active, p2_active, footer_text=None):
         embed = discord.Embed(title=f"⚔️ {p1_user.display_name} vs {p2_user.display_name}", color=discord.Color.red())
-        
+
         for user, team, active_char in [(p1_user, t1, p1_active), (p2_user, t2, p2_active)]:
             team_status = []
             for c in team:
@@ -377,12 +381,12 @@ class CZ(commands.Cog, name="Core Gameplay"):
                 status = "KO" if c['current_hp'] <= 0 else f"{round(c['current_hp'])}/{c['stats']['HP']}"
                 team_status.append(f"{active_indicator}**{c['name']}**: {hp_bar} `{status}`")
             embed.add_field(name=f"{user.display_name}'s Team", value="\n".join(team_status) or "Defeated", inline=False)
-            
+
         embed.add_field(name="Battle Log", value=">>> " + "\n".join(log[-5:]) or "Battle starts!", inline=False)
         if footer_text:
             embed.set_footer(text=footer_text)
         return embed
-        
+
     @commands.command(name='battleend', help="!battleend - Propose to end the current battle.", category="Battle System")
     async def battle_end(self, ctx):
         battle_key = None
@@ -394,7 +398,7 @@ class CZ(commands.Cog, name="Core Gameplay"):
                 opponent_id = key[1] if key[0] == ctx.author.id else key[0]
                 opponent = await self.bot.fetch_user(opponent_id)
                 break
-        
+
         if not battle_key or not opponent:
             await ctx.send("You are not currently in a battle."); return
 
@@ -412,21 +416,21 @@ class CZ(commands.Cog, name="Core Gameplay"):
     @commands.Cog.listener()
     async def on_message(self, message):
         if message.author.bot or (await self.bot.get_context(message)).valid: return
-        
+
         player = db.get_player(message.author.id)
         if not player.get("rules_accepted", 0): return
 
         char_id = player.get("selected_character_id")
         if not char_id or time.time() - player.get("last_xp_gain_time", 0) < 60: return
-        
+
         player["last_xp_gain_time"] = time.time()
         char = player["characters"].get(char_id)
         if not char or char['level'] >= 100: return
-        
+
         old_level = char['level']
         char['xp'] += random.randint(15, 25)
         xp_needed = self._get_xp_for_next_level(char['level'])
-        
+
         leveled_up = False
         while char['xp'] >= xp_needed:
             if char['level'] >= 100: 
@@ -443,16 +447,16 @@ class CZ(commands.Cog, name="Core Gameplay"):
                 stat_keys = ['HP', 'ATK', 'DEF', 'SPD', 'SP_ATK', 'SP_DEF']
                 base_stats = {k: v for k, v in base_char_data.items() if k in stat_keys}
                 char['stats'] = stats_cog._calculate_stats(base_stats, char['individual_ivs'], char['level'])
-            
-            await message.channel.send(f"🎉 **{char['name']}** (ID: {char_id}) leveled up to **Level {char['level']}**!")
+
+            await message.channel.send(f"🎉 **{char['name']}** (ID: {char['id']}) leveled up to **Level {char['level']}**!")
 
             all_special_moves = self.attacks.get('characters', {}).get(str(char.get('id')), [])
             newly_unlocked = [move for move in all_special_moves if old_level < move['unlock_level'] <= char['level']]
-            
+
             if newly_unlocked:
                 for new_move in newly_unlocked:
                     await message.channel.send(f"✨ **{char['name']}** unlocked a new move: **{new_move['name']}**!")
-        
+
         db.update_player(message.author.id, player)
 
 async def setup(bot):
@@ -461,4 +465,3 @@ async def setup(bot):
         print("❌ Critical Error: Could not load RPG cog due to missing characters.json data.")
     else:
         await bot.add_cog(cog)
-

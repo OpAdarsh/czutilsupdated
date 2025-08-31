@@ -230,7 +230,10 @@ class Admin(commands.Cog):
             async with aiohttp.ClientSession() as session:
                 async with session.get('http://127.0.0.1:5000', timeout=aiohttp.ClientTimeout(total=5)) as response:
                     if response.status == 200:
-                        await ctx.send("✅ **Bot is ALIVE!**\n✅ Connected and responding")
+                        status_msg = "✅ **Bot is ALIVE!**\n✅ Connected and responding"
+                        if self.api_key:
+                            status_msg += "\n🔗 **Monitor:** https://stats.uptimerobot.com/"
+                        await ctx.send(status_msg)
                     else:
                         await ctx.send(f"⚠️ Bot responding but web server returned status {response.status}")
         except (aiohttp.ClientError, asyncio.TimeoutError):
