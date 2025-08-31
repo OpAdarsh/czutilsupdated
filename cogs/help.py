@@ -38,7 +38,7 @@ class HelpView(discord.ui.View):
             "Team Management": "🛡️", "Battle System": "⚔️", "Market": "📈", 
             "Utils": "🔧", "Events": "🎉"
         }
-        
+
         # Custom category mapping for specific commands
         command_categories = {
             # Gacha System
@@ -46,62 +46,62 @@ class HelpView(discord.ui.View):
             'allcharacters': 'Gacha System', 'characters': 'Gacha System', 'chars': 'Gacha System',
             'items': 'Gacha System',
             'select': 'Gacha System',
-            
+
             # Player Info
             'info': 'Player Info',
             'inventory': 'Player Info', 'inv': 'Player Info',
             'collection': 'Player Info', 'col': 'Player Info',
-            
+
             # Economy
             'daily': 'Economy',
             'weekly': 'Economy',
             'slots': 'Economy',
             'balance': 'Economy', 'bal': 'Economy',
             'sell': 'Economy',
-            
+
             # Shop
             'shop': 'Shop',
             'buy': 'Shop',
-            
+
             # Team Management
             'team': 'Team Management',
             'equip': 'Team Management', 'eq': 'Team Management',
             'unequip': 'Team Management', 'ue': 'Team Management',
             'moves': 'Team Management', 'm': 'Team Management',
-            
+
             # Battle System
             'battle': 'Battle System',
             'battlecz': 'Battle System',
             'battleend': 'Battle System',
-            
+
             # Market
             'market': 'Market',
-            
+
             # Utils
             'afk': 'Utils',
             'calculator': 'Utils', 'calc': 'Utils',
-            
+
             # Events (for future)
             # Add event commands here when they're created
         }
-        
+
         for cmd in self.bot.commands:
             if not cmd.hidden and cmd.name != 'help':
                 # Skip certain cogs entirely
                 if cmd.cog_name in ['Admin', 'Webmonitor', 'Core Gameplay', 'Stat Calculations']:
                     continue
-                
+
                 # Use custom category mapping or fall back to cog name
                 category = command_categories.get(cmd.name, 'Utils')
                 emoji = emojis.get(category, "❓")
                 categorized[f"{emoji} {category}"].append(cmd)
-        
+
         return categorized
 
     def category_dropdown(self):
         # Create the dropdown menu for categories
         categorized = self.get_categorized_commands()
-        
+
         # Better descriptions for each category
         category_descriptions = {
             "🎰 Gacha System": "Pull characters and view collections",
@@ -114,7 +114,7 @@ class HelpView(discord.ui.View):
             "🔧 Utils": "Utility and fun commands",
             "🎉 Events": "Special event commands"
         }
-        
+
         options = [
             discord.SelectOption(
                 label=category, 
@@ -123,7 +123,7 @@ class HelpView(discord.ui.View):
             )
             for category in sorted(categorized.keys()) if categorized[category]
         ]
-        
+
         select = discord.ui.Select(
             placeholder="Choose a command category...",
             options=options,
@@ -142,12 +142,12 @@ class HelpView(discord.ui.View):
         # Callback for when a category is selected from the dropdown
         category_name = interaction.data['values'][0]
         prefix = self.bot.config.get('PREFIX', '!')
-        
+
         embed = discord.Embed(
             title=f"{category_name} Commands",
             color=discord.Color.blue()
         )
-        
+
         categorized = self.get_categorized_commands()
         commands_in_category = sorted(categorized.get(category_name, []), key=lambda c: c.name)
 
@@ -160,14 +160,14 @@ class HelpView(discord.ui.View):
                 help_text = command.help.split('-')[1].strip() if '-' in command.help else command.help
                 signature = f"{command.name} {command.signature}".strip()
                 aliases = f" • Aliases: {', '.join(f'`{a}`' for a in command.aliases)}" if command.aliases else ""
-                
+
                 command_line = f"**`{prefix}{signature}`**{aliases}"
                 description_line = f"*{help_text}*"
                 description_lines.append(f"{command_line}\n{description_line}")
-            
+
             embed.description = "\n\n".join(description_lines)
             embed.set_footer(text=f"💡 Use {prefix}help <command> for detailed information")
-        
+
         await interaction.response.edit_message(embed=embed)
 
 
@@ -192,7 +192,7 @@ class HelpCog(commands.Cog, name="Help"):
                 await ctx.send(f"Sorry, I couldn't find a command named `{command_name}`.")
         else:
             view = HelpView(self.bot, ctx.author)
-            
+
             embed = discord.Embed(
                 title="🔮 Bot Help Menu",
                 description=f"Welcome! I am a game bot with many features.\n\nUse the dropdown menu below to browse command categories, or use `{prefix}help <command>` for details on a specific command.",
@@ -228,13 +228,13 @@ class HelpCog(commands.Cog, name="Help"):
             embed.add_field(name="Filtering", value=filter_examples, inline=False)
 
         embed.add_field(name="Aliases", value=aliases, inline=False)
-        
+
         category = getattr(command, 'category', command.cog_name)
         if category:
             embed.add_field(name="Category", value=category, inline=False)
-            
+
         return embed
-    
+
     def cog_unload(self):
         self.bot.remove_command('help')
         if self._original_help_command:
@@ -242,4 +242,3 @@ class HelpCog(commands.Cog, name="Help"):
 
 async def setup(bot):
     await bot.add_cog(HelpCog(bot))
-
