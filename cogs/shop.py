@@ -38,27 +38,63 @@ class Shop(commands.Cog):
     @commands.group(name='shop', invoke_without_command=True, help="!shop - Displays the item shop.", category="Shop")
     @has_accepted_rules()
     async def shop(self, ctx):
-        embed = discord.Embed(title="🛒 Item Shop", description="Welcome to the shop! Use `!shop buy <item>` to purchase.", color=discord.Color.gold())
-        embed.add_field(name="Item Box", value="**Cost:** 200 coins\nA mysterious box containing a random item.", inline=False)
+        embed = discord.Embed(title="🛒 Item Shop", description="Welcome to the shop! Use `!shop buy <item> [amount]` to purchase.", color=discord.Color.gold())
+        embed.add_field(name="📦 Item Box", value="**Cost:** 200 coins each\n**Aliases:** `itembox`, `box`\nA mysterious box containing a random item.", inline=False)
+        embed.add_field(name="🎟️ Pull Ticket", value="**Cost:** 50 coins each\n**Aliases:** `ticket`, `tk`\nAllows you to pull a character without cooldown.\n**Bulk:** `!shop buy tk 5` for 5 tickets", inline=False)
         await ctx.send(embed=embed)
 
-    @shop.command(name='buy', help="!shop buy itembox - Buy an item box.", category="Shop")
+    @shop.command(name='buy', help="!shop buy <item> [amount] - Buy an item from the shop.", category="Shop")
     @has_accepted_rules()
-    async def buy(self, ctx, item: str):
-        if item.lower() != 'itembox':
-            await ctx.send("That item isn't in the shop."); return
-        
+    async def buy(self, ctx, item: str, amount: int = 1):
         player = db.get_player(ctx.author.id)
-        if player['coins'] < 200:
-            await ctx.send("You don't have enough coins! (Need 200)"); return
+        item_lower = item.lower()
+        
+        if amount <= 0:
+            await ctx.send("Amount must be a positive number!"); return
+        
+        if item_lower in ['itembox', 'item box', 'box']:
+            total_cost = 200 * amount
+            if player['coins'] < total_cost:
+                await ctx.send(f"You don't have enough coins! (Need {total_cost} for {amount} Item Box{'es' if amount > 1 else ''})"); return
+                
+            player['coins'] -= total_cost
+            items_received = []
             
-        player['coins'] -= 200
-        rarity = random.choices(["common", "rare", "epic", "legendary"], [65, 25, 9.5, 0.5], k=1)[0]
-        item_type = random.choice(list(self.items.keys()))
-        item_full_name = f"{item_type} {rarity}"
-        player['inventory'][item_full_name] = player['inventory'].get(item_full_name, 0) + 1
-        db.update_player(ctx.author.id, player)
-        await ctx.send(f"You bought an Item Box and found a **{item_full_name}**!")
+            for _ in range(amount):
+                rarity = random.choices(["common", "rare", "epic", "legendary"], [65, 25, 9.5, 0.5], k=1)[0]
+                item_type = random.choice(list(self.items.keys()))
+                item_full_name = f"{item_type} {rarity}"
+                player['inventory'][item_full_name] = player['inventory'].get(item_full_name, 0) + 1
+                items_received.append(item_full_name)
+            
+            db.update_player(ctx.author.id, player)
+            
+            if amount == 1:
+                await ctx.send(f"You bought an Item Box and found a **{items_received[0]}**!")
+            else:
+                await ctx.send(f"You bought {amount} Item Boxes and found:\n" + "\n".join(f"• **{item}**" for item in items_received))
+            
+        elif item_lower in ['ticket', 'pull ticket', 'pullticket', '🎟️', 'pull', 'tk']:
+            total_cost = 50 * amount
+            if player['coins'] < total_cost:
+                await ctx.send(f"You don't have enough coins! (Need {total_cost} for {amount} Pull Ticket{'s' if amount > 1 else ''})"); return
+                
+            player['coins'] -= total_cost
+            player['inventory']['🎟️ Pull Ticket'] = player['inventory'].get('🎟️ Pull Ticket', 0) + amount
+            db.update_player(ctx.author.id, player)
+            
+            if amount == 1:
+                await ctx.send(f"You bought a **🎟️ Pull Ticket**! Use `!pull` to bypass the cooldown.")
+            else:
+                await ctx.send(f"You bought **{amount} 🎟️ Pull Tickets**! Use `!pull` to bypass the cooldown.")
+            
+        else:
+            await ctx.send("That item isn't in the shop. Available items: `itembox`, `ticket` (alias: `tk`)"); return
+
+    @commands.command(name='buy', help="!buy <item> [amount] - Buy an item directly.", category="Shop")
+    @has_accepted_rules()
+    async def buy_direct(self, ctx, item: str, amount: int = 1):
+        await self.buy(ctx, item, amount)
 
 async def setup(bot):
     await bot.add_cog(Shop(bot))
