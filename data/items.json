@@ -24,15 +24,15 @@
         "legendary": {"boost": 30, "stat": "SPD"}
     },
     "SP ATK Boost": {
-        "common": {"boost": 10, "stat": "SP ATK"},
-        "rare": {"boost": 15, "stat": "SP ATK"},
-        "epic": {"boost": 20, "stat": "SP ATK"},
-        "legendary": {"boost": 30, "stat": "SP ATK"}
+        "common": {"boost": 10, "stat": "SP_ATK"},
+        "rare": {"boost": 15, "stat": "SP_ATK"},
+        "epic": {"boost": 20, "stat": "SP_ATK"},
+        "legendary": {"boost": 30, "stat": "SP_ATK"}
     },
         "SP DEF Boost": {
-        "common": {"boost": 10, "stat": "SP DEF"},
-        "rare": {"boost": 15, "stat": "SP DEF"},
-        "epic": {"boost": 20, "stat": "SP DEF"},
-        "legendary": {"boost": 30, "stat": "SP DEF"}
+        "common": {"boost": 10, "stat": "SP_DEF"},
+        "rare": {"boost": 15, "stat": "SP_DEF"},
+        "epic": {"boost": 20, "stat": "SP_DEF"},
+        "legendary": {"boost": 30, "stat": "SP_DEF"}
     }
 }
