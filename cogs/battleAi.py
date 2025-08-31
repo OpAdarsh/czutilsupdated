@@ -229,6 +229,9 @@ class BattleAI(commands.Cog, name="AI Battle"):
             # Advanced AI moveset learning - give them optimal movesets based on their level
             scaled_char['moveset'] = self._generate_ai_moveset(scaled_char, name)
             
+            # Initialize current_hp for battle
+            scaled_char['current_hp'] = scaled_char['stats']['HP']
+            
             bot_team.append(scaled_char)
 
         await self._run_ai_battle(ctx, challenger, player_data, bot_team)
@@ -368,26 +371,79 @@ class BattleAI(commands.Cog, name="AI Battle"):
         finally:
             self.active_battles.remove(user.id)
 
-    def _create_hp_bar(self, current, max_val, length=10):
-        if max_val <= 0: return f"`[{' ' * length}]`"
+    def _create_hp_bar(self, current, max_val, length=12):
+        if max_val <= 0: return f"`[{' ' * length}]` 0%"
         percent = max(0, min(1, current / max_val))
         filled_length = int(length * percent)
-        bar = '█' * filled_length + '─' * (length - filled_length)
-        return f"`[{bar}]`"
+        
+        # Color coding based on HP percentage
+        if percent > 0.7:
+            bar_char = '🟩'
+        elif percent > 0.3:
+            bar_char = '🟨'
+        else:
+            bar_char = '🟥'
+            
+        empty_char = '⬜'
+        bar = bar_char * filled_length + empty_char * (length - filled_length)
+        percentage = int(percent * 100)
+        return f"{bar} {percentage}%"
 
     def _create_battle_embed(self, log, t1, t2, p1_user, p2_user, p1_active, p2_active, footer_text=None):
         embed = discord.Embed(title=f"⚔️ {p1_user.display_name} vs {p2_user.display_name}", color=discord.Color.red())
         
+        # Active fighters section with enhanced HP bars
+        if p1_active and p2_active:
+            p1_hp_bar = self._create_hp_bar(p1_active['current_hp'], p1_active['stats']['HP'], 12)
+            p2_hp_bar = self._create_hp_bar(p2_active['current_hp'], p2_active['stats']['HP'], 12)
+            
+            active_display = f"🥊 **{p1_active['name']}** (Lv.{p1_active['level']})\n{p1_hp_bar}\n"
+            active_display += f"⚡ ATK: {p1_active['stats']['ATK']} | DEF: {p1_active['stats']['DEF']} | SPD: {p1_active['stats']['SPD']}\n\n"
+            active_display += f"🤖 **{p2_active['name']}** (Lv.{p2_active['level']}) [AI]\n{p2_hp_bar}\n"
+            active_display += f"⚡ ATK: {p2_active['stats']['ATK']} | DEF: {p2_active['stats']['DEF']} | SPD: {p2_active['stats']['SPD']}"
+            
+            embed.add_field(name="🔥 Active Fighters", value=active_display, inline=False)
+        
+        # Team status (more compact)
         for user, team, active_char in [(p1_user, t1, p1_active), (p2_user, t2, p2_active)]:
             team_status = []
-            for c in team:
-                hp_bar = self._create_hp_bar(c['current_hp'], c['stats']['HP'])
-                active_indicator = "▶️" if c is active_char and c['current_hp'] > 0 else ""
-                status = "KO" if c['current_hp'] <= 0 else f"{round(c['current_hp'])}/{c['stats']['HP']}"
-                team_status.append(f"{active_indicator}**{c['name']}**: {hp_bar} `{status}`")
-            embed.add_field(name=f"{user.display_name}'s Team", value="\n".join(team_status) or "Defeated", inline=False)
+            for i, c in enumerate(team, 1):
+                active_indicator = "🟢" if c is active_char and c['current_hp'] > 0 else "⚪"
+                status = "💀" if c['current_hp'] <= 0 else f"{round(c['current_hp'])}/{c['stats']['HP']}"
+                team_status.append(f"{active_indicator} **{c['name']}** `{status}`")
             
-        embed.add_field(name="Battle Log", value=">>> " + "\n".join(log[-5:]) or "Battle starts!", inline=False)
+            team_name = f"🛡️ {user.display_name}'s Team" if user != self.bot.user else "🤖 AI Team"
+            embed.add_field(name=team_name, value="\n".join(team_status) or "Defeated", inline=True)
+            
+        # Enhanced battle log - keep more history and format better
+        if log:
+            formatted_log = []
+            for entry in log[-10:]:  # Keep last 10 entries instead of 5
+                if "uses" in entry and "on" in entry:
+                    formatted_log.append(f"⚔️ {entry}")
+                elif "damage" in entry and "hits" in entry:
+                    formatted_log.append(f"💥 {entry}")
+                elif "defeated" in entry or "fainted" in entry:
+                    formatted_log.append(f"💀 {entry}")
+                elif "sends out" in entry:
+                    formatted_log.append(f"🔄 {entry}")
+                elif "missed" in entry:
+                    formatted_log.append(f"💨 {entry}")
+                elif "CRITICAL" in entry:
+                    formatted_log.append(f"💯 {entry}")
+                elif "New Round" in entry:
+                    formatted_log.append(f"🔄 ═══ {entry} ═══")
+                else:
+                    formatted_log.append(f"📢 {entry}")
+            
+            # Ensure we don't exceed Discord's field limit
+            log_text = "\n".join(formatted_log)
+            if len(log_text) > 1000:
+                # Trim from the beginning if too long
+                log_text = "..." + log_text[-950:]
+            
+            embed.add_field(name="📜 Battle History", value=f"```{log_text}```", inline=False)
+        
         if footer_text:
             embed.set_footer(text=footer_text)
         return embed
