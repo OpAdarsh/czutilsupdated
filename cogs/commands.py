@@ -681,6 +681,76 @@ class CharacterManagement(commands.Cog, name="Player Commands"):
         embed.set_footer(text="Use `!moves swap <id_or_name>, <new_move>, <old_move>` or `!learn <id_or_name>, <move_name>`")
         await ctx.send(embed=embed)
 
+    async def show_character_moveset(self, ctx, character, char_id):
+        """Shows the moveset for a character in a compact format for the learn command."""
+        embed = discord.Embed(
+            title=f"🎯 {character['name']}'s Moveset (ID: {char_id})", 
+            description=f"**Level:** {character['level']} | **IV:** {character['iv']}%",
+            color=discord.Color.blue()
+        )
+
+        # Get move data
+        common_physical = self.attacks.get('physical', [])
+        common_special = self.attacks.get('special', [])
+        all_special_moves = self.attacks.get('characters', {}).get(str(character.get('id')), [])
+
+        # Display active moveset in 4-slot format
+        current_moveset = character.get('moveset', [None, None, None, None])
+        while len(current_moveset) < 4:
+            current_moveset.append(None)
+
+        moveset_display = []
+        for i, move_name in enumerate(current_moveset, 1):
+            if move_name:
+                # Find move data
+                move_data = None
+                for move_list in [common_physical, common_special, all_special_moves]:
+                    move_data = next((m for m in move_list if m['name'] == move_name), None)
+                    if move_data:
+                        break
+
+                if move_data:
+                    power = move_data.get('power', 0)
+                    accuracy = move_data.get('accuracy', 100)
+                    move_type = move_data.get('type', move_data.get('element', 'Normal'))
+                    moveset_display.append(f"**{i}.** {move_name} - PWR: {power}, ACC: {accuracy}%, Type: {move_type}")
+                else:
+                    moveset_display.append(f"**{i}.** {move_name}")
+            else:
+                moveset_display.append(f"**{i}.** *Empty* - Use `!learn <move> {i}` to fill")
+
+        embed.add_field(name="⚔️ Active Moveset", value="\n".join(moveset_display), inline=False)
+
+        # Show available moves to learn
+        active_moves_names = [move for move in current_moveset if move is not None]
+        available_moves = []
+        for move in all_special_moves:
+            if move['unlock_level'] <= character['level'] and move['name'] not in active_moves_names:
+                available_moves.append(f"**{move['name']}** - PWR: {move.get('power', 0)}, ACC: {move.get('accuracy', 100)}%")
+
+        if available_moves:
+            embed.add_field(
+                name="📚 Available to Learn", 
+                value="\n".join(available_moves[:8]) + ("..." if len(available_moves) > 8 else ""), 
+                inline=False
+            )
+        else:
+            embed.add_field(name="📚 Available to Learn", value="No new moves available at this level.", inline=False)
+
+        # Show locked moves
+        locked_moves = [f"**{m['name']}** (Lvl {m['unlock_level']})" 
+                       for m in all_special_moves 
+                       if m['unlock_level'] > character['level']]
+        if locked_moves:
+            embed.add_field(
+                name="🔒 Locked Moves", 
+                value="\n".join(locked_moves[:5]) + ("..." if len(locked_moves) > 5 else ""), 
+                inline=False
+            )
+
+        embed.set_footer(text="Use !learn <move_name> [position] to teach a move")
+        await ctx.send(embed=embed)
+
     @moves.command(name='swap', help="!moves swap <id_or_name>, <new>, <old> - Swaps moves.", category="Team Management")
     @has_accepted_rules()
     async def swap_moves(self, ctx, *, arguments: str):
@@ -779,9 +849,9 @@ class CharacterManagement(commands.Cog, name="Player Commands"):
             except:
                 pass
 
-    @commands.command(name='learn', help="!learn <move_name> <position> - Teaches a move to selected character. Use !select first.", category="Team Management")
+    @commands.command(name='learn', help="!learn [move_name] [position] - Shows moveset or teaches a move to selected character. Use !select first.", category="Team Management")
     @has_accepted_rules()
-    async def learn_move(self, ctx, move_name: str, position: int = None):
+    async def learn_move(self, ctx, move_name: str = None, position: int = None):
         player = db.get_player(ctx.author.id)
 
         # Check if user has selected a character
@@ -797,6 +867,11 @@ class CharacterManagement(commands.Cog, name="Player Commands"):
         # Ensure char_id is integer for consistency
         char_id = int(char_id)
         character = player['characters'][char_id]
+
+        # If no move_name provided, show the character's moveset
+        if move_name is None:
+            await self.show_character_moveset(ctx, character, char_id)
+            return
 
         # Validate position if provided
         if position is not None:
