@@ -32,7 +32,11 @@ def has_accepted_rules():
             return True
 
         cz_cog = ctx.bot.get_cog('Core Gameplay')
-        if not cz_cog or ctx.author.id in cz_cog.rules_prompts:
+        if not cz_cog:
+            return False
+        
+        # Check if user already has a pending rules prompt
+        if ctx.author.id in cz_cog.rules_prompts.values():
             return False
 
         embed = discord.Embed(
@@ -95,7 +99,7 @@ class CharacterManagement(commands.Cog, name="Player Commands"):
         id_list = ", ".join(f"`{cid}` ({c['name']})" for cid, c in matches)
         await ctx.send(f"❓ You have multiple characters matching that name. Please be more specific or use one of these IDs: {id_list}"); return None
 
-    @commands.command(name='pull', aliases=['p'], help="!pull - Get a free random character every 5 minutes.", category="Economic")
+    @commands.command(name='pull', aliases=['p'], help="!pull - Get a free random character every 5 minutes.", category="Gacha System")
     @has_accepted_rules()
     async def pull(self, ctx):
         cz_cog = self.bot.get_cog('Core Gameplay')
@@ -105,12 +109,24 @@ class CharacterManagement(commands.Cog, name="Player Commands"):
 
         player = db.get_player(ctx.author.id)
         
+        # Check for tickets to bypass cooldown
+        has_ticket = player['inventory'].get('🎟️ Pull Ticket', 0) > 0
         cooldown = 300  # 5 minutes
         time_since_last_pull = time.time() - player.get('last_pull_time', 0)
 
-        if time_since_last_pull < cooldown:
+        if time_since_last_pull < cooldown and not has_ticket:
             remaining_time = cooldown - time_since_last_pull
-            await ctx.send(f"You're on cooldown! Please wait {int(remaining_time // 60)}m {int(remaining_time % 60)}s."); return
+            ticket_msg = " Or use a 🎟️ Pull Ticket to bypass the cooldown!" if player['inventory'].get('🎟️ Pull Ticket', 0) > 0 else ""
+            await ctx.send(f"You're on cooldown! Please wait {int(remaining_time // 60)}m {int(remaining_time % 60)}s.{ticket_msg}"); return
+
+        # Use ticket if on cooldown
+        if time_since_last_pull < cooldown and has_ticket:
+            player['inventory']['🎟️ Pull Ticket'] -= 1
+            if player['inventory']['🎟️ Pull Ticket'] == 0:
+                del player['inventory']['🎟️ Pull Ticket']
+            ticket_used = True
+        else:
+            ticket_used = False
 
         char_name, char_data = random.choice(list(self.characters.items()))
         base_char = {"name": char_name, **char_data}
@@ -127,12 +143,17 @@ class CharacterManagement(commands.Cog, name="Player Commands"):
         player['characters'][char_id] = new_char_instance
         player['latest_pull_id'] = char_id
         player['next_character_id'] += 1
-        player['last_pull_time'] = time.time()
+        
+        # Only update pull time if not using ticket
+        if not ticket_used:
+            player['last_pull_time'] = time.time()
         
         db.update_player(ctx.author.id, player)
-        await ctx.send(f"You pulled a **Lvl {random_level} {char_name}** with **{new_char_instance['iv']}% IV**! Use `!info latest` to see their stats.")
+        
+        ticket_text = " (🎟️ Ticket used)" if ticket_used else ""
+        await ctx.send(f"You pulled a **Lvl {random_level} {char_name}** with **{new_char_instance['iv']}% IV**{ticket_text}! Use `!info latest` to see their stats.")
 
-    @commands.command(name='sell', help="!sell <id_or_name> - Sells a character for coins.", category="Economic")
+    @commands.command(name='sell', help="!sell <id_or_name> - Sells a character for coins.", category="Economy")
     @has_accepted_rules()
     async def sell(self, ctx, *, identifier: str):
         player = db.get_player(ctx.author.id)
@@ -153,13 +174,13 @@ class CharacterManagement(commands.Cog, name="Player Commands"):
         db.update_player(ctx.author.id, player)
         await ctx.send(f"You sold **{character_to_sell['name']}** for **{sale_price}** coins.")
 
-    @commands.command(name='balance', aliases=['bal'], help="!balance - Check your coin balance.", category="Economic")
+    @commands.command(name='balance', aliases=['bal'], help="!balance - Check your coin balance.", category="Economy")
     @has_accepted_rules()
     async def balance(self, ctx):
         player = db.get_player(ctx.author.id)
         await ctx.send(f"💰 You have **{player['coins']}** coins.")
 
-    @commands.command(name='daily', help="!daily - Claim your daily coins.", category="Economic")
+    @commands.command(name='daily', help="!daily - Claim your daily coins.", category="Economy")
     @has_accepted_rules()
     async def daily(self, ctx):
         player = db.get_player(ctx.author.id)
@@ -177,7 +198,79 @@ class CharacterManagement(commands.Cog, name="Player Commands"):
         db.update_player(ctx.author.id, player)
         await ctx.send(f"🎉 You claimed **{total_reward}** coins! Your current streak is **{player['daily_streak']}** day(s).")
 
-    @commands.command(name='allcharacters', aliases=['chars', 'characters'], help="!allcharacters [sort_key] - View all characters.", category="Economic")
+    @commands.command(name='weekly', help="!weekly - Claim your weekly coins.", category="Economy")
+    @has_accepted_rules()
+    async def weekly(self, ctx):
+        player = db.get_player(ctx.author.id)
+        today = datetime.date.today()
+        last_weekly = player.get('last_weekly_date')
+        
+        if last_weekly:
+            last_weekly_date = datetime.datetime.strptime(last_weekly, '%Y-%m-%d').date()
+            days_since_weekly = (today - last_weekly_date).days
+            if days_since_weekly < 7:
+                days_remaining = 7 - days_since_weekly
+                await ctx.send(f"You can claim your weekly reward in **{days_remaining}** day(s)!"); return
+        
+        weekly_reward = random.randint(1000, 1500)
+        player['coins'] += weekly_reward
+        player['last_weekly_date'] = today.isoformat()
+        db.update_player(ctx.author.id, player)
+        await ctx.send(f"🎁 You claimed your weekly reward of **{weekly_reward}** coins!")
+
+    @commands.command(name='slots', help="!slots <amount> - Play the slot machine.", category="Economy")
+    @has_accepted_rules()
+    async def slots(self, ctx, amount: int):
+        player = db.get_player(ctx.author.id)
+        
+        if amount < 10:
+            await ctx.send("Minimum bet is **10** coins!"); return
+        if amount > player['coins']:
+            await ctx.send("You don't have enough coins!"); return
+        if amount > 1000:
+            await ctx.send("Maximum bet is **1000** coins!"); return
+        
+        # Deduct the bet
+        player['coins'] -= amount
+        
+        # Slot machine symbols and their weights
+        symbols = ['🍒', '🍋', '🍊', '🍇', '🔔', '💎', '7️⃣']
+        weights = [25, 20, 20, 15, 10, 7, 3]  # Higher chance for lower value symbols
+        
+        # Generate 3 random symbols
+        result = random.choices(symbols, weights=weights, k=3)
+        
+        # Calculate winnings
+        winnings = 0
+        if result[0] == result[1] == result[2]:  # Three of a kind
+            multipliers = {'🍒': 2, '🍋': 3, '🍊': 4, '🍇': 5, '🔔': 8, '💎': 15, '7️⃣': 50}
+            winnings = amount * multipliers.get(result[0], 2)
+        elif result[0] == result[1] or result[1] == result[2] or result[0] == result[2]:  # Two of a kind
+            winnings = int(amount * 0.5)
+        
+        player['coins'] += winnings
+        db.update_player(ctx.author.id, player)
+        
+        result_display = " | ".join(result)
+        embed = discord.Embed(title="🎰 Slot Machine", color=discord.Color.gold())
+        embed.add_field(name="Result", value=f"[ {result_display} ]", inline=False)
+        
+        if winnings > 0:
+            profit = winnings - amount
+            if profit > 0:
+                embed.add_field(name="🎉 You Won!", value=f"**+{profit}** coins (Total: {winnings})", inline=False)
+                embed.color = discord.Color.green()
+            else:
+                embed.add_field(name="💔 You Lost", value=f"**-{amount - winnings}** coins", inline=False)
+                embed.color = discord.Color.red()
+        else:
+            embed.add_field(name="💔 You Lost", value=f"**-{amount}** coins", inline=False)
+            embed.color = discord.Color.red()
+        
+        embed.add_field(name="Balance", value=f"💰 {player['coins']} coins", inline=False)
+        await ctx.send(embed=embed)
+
+    @commands.command(name='allcharacters', aliases=['chars', 'characters'], help="!allcharacters [sort_key] - View all characters.", category="Gacha System")
     @has_accepted_rules()
     async def allcharacters(self, ctx, sort_by: str = "name"):
         valid_sorts = ['atk', 'def', 'spd', 'sp_atk', 'sp_def', 'hp', 'name']
@@ -211,7 +304,7 @@ class CharacterManagement(commands.Cog, name="Player Commands"):
             except asyncio.TimeoutError:
                 await message.clear_reactions(); break
 
-    @commands.command(name='info', aliases=['i'], help="!info [latest|id_or_name] - Shows info for a character.", category="Economic")
+    @commands.command(name='info', aliases=['i'], help="!info [latest|id_or_name] - Shows info for a character.", category="Player Info")
     @has_accepted_rules()
     async def info(self, ctx, *, identifier: str = "latest"):
         stats_cog = self.bot.get_cog('Stat Calculations')
@@ -244,8 +337,14 @@ class CharacterManagement(commands.Cog, name="Player Commands"):
         embed.add_field(name="Equipped", value=char.get('equipped_item', "None"), inline=True)
         embed.set_footer(text=f"Total IV: {char['iv']}%")
         await ctx.send(embed=embed)
+
+    @commands.command(name='infolatest', aliases=['il'], help="!infolatest - Shows info for your latest pulled character.", category="Player Info")
+    @has_accepted_rules()
+    async def info_latest(self, ctx):
+        # Call the info command with "latest" as argument
+        await self.info(ctx, identifier="latest")
             
-    @commands.command(name='collection', aliases=['col'], help="!collection - View your character collection.", category="Economic")
+    @commands.command(name='collection', aliases=['col'], help="!collection - View your character collection.", category="Player Info")
     @has_accepted_rules()
     async def collection(self, ctx):
         player = db.get_player(ctx.author.id)
@@ -258,33 +357,89 @@ class CharacterManagement(commands.Cog, name="Player Commands"):
         embed.description = desc
         await ctx.send(embed=embed)
 
-    @commands.command(name='inventory', aliases=['inv'], help="!inventory - View your items.", category="Economic")
+    @commands.command(name='inventory', aliases=['inv'], help="!inventory - View your items.", category="Player Info")
     @has_accepted_rules()
     async def inventory(self, ctx):
         player = db.get_player(ctx.author.id)
         if not player['inventory']:
             await ctx.send("Your inventory is empty."); return
         embed = discord.Embed(title="Your Inventory", color=discord.Color.orange())
-        embed.description = "\n".join(f"**{name}**: x{count}" for name, count in player['inventory'].items())
+        
+        # Format items with special handling for tickets
+        inventory_text = []
+        for name, count in player['inventory'].items():
+            if "Pull Ticket" in name or "🎟️" in name:
+                inventory_text.append(f"🎟️ **Pull Tickets**: x{count}")
+            else:
+                inventory_text.append(f"**{name}**: x{count}")
+        
+        embed.description = "\n".join(inventory_text)
         await ctx.send(embed=embed)
 
-    @commands.command(name='select', help="!select <id_or_name> - Select your active character.", category="Team")
+    @commands.command(name='items', aliases=['item'], help="!items [item_name] - Shows available items or specific item info.", category="Gacha System")
+    @has_accepted_rules()
+    async def items(self, ctx, *, item_name: str = None):
+        if item_name is None:
+            # Show all available items
+            embed = discord.Embed(title="📦 Available Items", description="Use `!items <item_name>` for detailed info", color=discord.Color.gold())
+            
+            for item_type, rarities in self.items.items():
+                rarity_list = []
+                for rarity in rarities.keys():
+                    rarity_list.append(f"{rarity.title()}")
+                embed.add_field(name=f"**{item_type}**", value=" | ".join(rarity_list), inline=False)
+            
+            embed.set_footer(text="Items boost stats when equipped to characters")
+            await ctx.send(embed=embed)
+        else:
+            # Show specific item details
+            item_name_lower = item_name.lower()
+            found_item = None
+            found_type = None
+            
+            # Search for the item
+            for item_type, rarities in self.items.items():
+                if item_name_lower in item_type.lower():
+                    found_type = item_type
+                    found_item = rarities
+                    break
+            
+            if not found_item:
+                await ctx.send(f"❌ Item '{item_name}' not found. Use `!items` to see all available items."); return
+            
+            embed = discord.Embed(title=f"📦 {found_type}", description="Stat boost item that can be equipped to characters", color=discord.Color.blue())
+            
+            for rarity, data in found_item.items():
+                boost_stat = data['stat']
+                boost_amount = data['boost']
+                embed.add_field(
+                    name=f"{rarity.title()} {found_type}", 
+                    value=f"**Boosts:** {boost_stat} by +{boost_amount}%\n**Usage:** Equip to character with `!equip <character>, {rarity} {found_type}`", 
+                    inline=False
+                )
+            
+            embed.set_footer(text="Get items from Item Boxes in the shop!")
+            await ctx.send(embed=embed)
+
+    @commands.command(name='select', help="!select <id_or_name> - Select your active character.", category="Gacha System")
     @has_accepted_rules()
     async def select(self, ctx, *, identifier: str):
         player = db.get_player(ctx.author.id)
         char_id = await self._find_character_from_input(ctx, player, identifier)
         if char_id is None: return
 
+        # Ensure char_id is integer
+        char_id = int(char_id)
         player['selected_character_id'] = char_id
         db.update_player(ctx.author.id, player)
         await ctx.send(f"✅ You have selected **{player['characters'][char_id]['name']}** (ID: {char_id}) to gain XP.")
 
-    @commands.group(name='team', aliases=['t'], invoke_without_command=True, help="!team - Manages your 3-slot team.", category="Team")
+    @commands.group(name='team', aliases=['t'], invoke_without_command=True, help="!team - Manages your 3-slot team.", category="Team Management")
     @has_accepted_rules()
     async def team(self, ctx):
         await self.view_team(ctx)
 
-    @team.command(name='view', aliases=['v'], help="!team view - View your active team.", category="Team")
+    @team.command(name='view', aliases=['v'], help="!team view - View your active team.", category="Team Management")
     @has_accepted_rules()
     async def view_team(self, ctx):
         player = db.get_player(ctx.author.id)
@@ -292,7 +447,9 @@ class CharacterManagement(commands.Cog, name="Player Commands"):
         
         embed = discord.Embed(title="Your Active Team", color=discord.Color.green())
         
-        for slot, char_id in team_slots.items():
+        # Always show all 3 slots
+        for slot in ['1', '2', '3']:
+            char_id = team_slots.get(slot)
             if char_id:
                 char_info = player['characters'].get(char_id)
                 if char_info:
@@ -300,11 +457,11 @@ class CharacterManagement(commands.Cog, name="Player Commands"):
                 else:
                     embed.add_field(name=f"Slot {slot}", value=f"Invalid Character (ID: {char_id})", inline=False)
             else:
-                embed.add_field(name=f"Slot {slot}", value="Empty", inline=False)
+                embed.add_field(name=f"Slot {slot}", value="📭 Empty Position\n*Use `!team add {slot} <character>` to fill*", inline=False)
                 
         await ctx.send(embed=embed)
 
-    @team.command(name='add', help="!team add <slot> <id_or_name> - Adds a character to a team slot.", category="Team")
+    @team.command(name='add', help="!team add <slot> <id_or_name> - Adds a character to a team slot.", category="Team Management")
     @has_accepted_rules()
     async def team_add(self, ctx, slot: str, *, identifier: str):
         if slot not in ['1', '2', '3']:
@@ -328,7 +485,7 @@ class CharacterManagement(commands.Cog, name="Player Commands"):
         await ctx.send(f"Added **{player['characters'][char_id]['name']}** to team slot {slot}.")
         await self.view_team(ctx)
 
-    @team.command(name='remove', aliases=['r'], help="!team remove <slot> - Removes a character from a team slot.", category="Team")
+    @team.command(name='remove', aliases=['r'], help="!team remove <slot> - Removes a character from a team slot.", category="Team Management")
     @has_accepted_rules()
     async def team_remove(self, ctx, slot: str):
         if slot not in ['1', '2', '3']:
@@ -348,7 +505,7 @@ class CharacterManagement(commands.Cog, name="Player Commands"):
         await ctx.send(f"Removed **{char_name}** from team slot {slot}.")
         await self.view_team(ctx)
 
-    @team.command(name='swap', help="!team swap <slot> <id_or_name> - Swaps a character into a team slot.", category="Team")
+    @team.command(name='swap', help="!team swap <slot> <id_or_name> - Swaps a character into a team slot.", category="Team Management")
     @has_accepted_rules()
     async def team_swap(self, ctx, slot: str, *, identifier: str):
         if slot not in ['1', '2', '3']:
@@ -382,7 +539,7 @@ class CharacterManagement(commands.Cog, name="Player Commands"):
         db.update_player(ctx.author.id, player)
         await self.view_team(ctx)
 
-    @commands.command(name='equip', aliases=['eq'], help="!equip <id_or_name>, <item_name> - Equips an item.", category="Team")
+    @commands.command(name='equip', aliases=['eq'], help="!equip <id_or_name>, <item_name> - Equips an item.", category="Team Management")
     @has_accepted_rules()
     async def equip(self, ctx, *, arguments: str):
         try:
@@ -409,7 +566,7 @@ class CharacterManagement(commands.Cog, name="Player Commands"):
         db.update_player(ctx.author.id, player)
         await ctx.send(f"Equipped **{found_item}** on **{character['name']}**.")
 
-    @commands.command(name='unequip', aliases=['ue'], help="!unequip <id_or_name> - Unequips an item.", category="Team")
+    @commands.command(name='unequip', aliases=['ue'], help="!unequip <id_or_name> - Unequips an item.", category="Team Management")
     @has_accepted_rules()
     async def unequip(self, ctx, *, identifier: str):
         player = db.get_player(ctx.author.id)
@@ -426,7 +583,7 @@ class CharacterManagement(commands.Cog, name="Player Commands"):
         db.update_player(ctx.author.id, player)
         await ctx.send(f"Unequipped **{item_name}** from **{character['name']}**.")
 
-    @commands.group(name='moves', aliases=['m'], invoke_without_command=True, help="!moves [id_or_name] - Manage character moves.", category="Team")
+    @commands.group(name='moves', aliases=['m'], invoke_without_command=True, help="!moves [id_or_name] - Manage character moves.", category="Team Management")
     @has_accepted_rules()
     async def moves(self, ctx, *, identifier: str = None):
         player = db.get_player(ctx.author.id)
@@ -464,7 +621,7 @@ class CharacterManagement(commands.Cog, name="Player Commands"):
         embed.set_footer(text="Use `!moves swap <id_or_name>, <new_move>, <old_move>`")
         await ctx.send(embed=embed)
 
-    @moves.command(name='swap', help="!moves swap <id_or_name>, <new>, <old> - Swaps moves.", category="Team")
+    @moves.command(name='swap', help="!moves swap <id_or_name>, <new>, <old> - Swaps moves.", category="Team Management")
     @has_accepted_rules()
     async def swap_moves(self, ctx, *, arguments: str):
         try:
