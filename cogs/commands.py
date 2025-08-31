@@ -162,7 +162,8 @@ class CharacterManagement(commands.Cog, name="Player Commands"):
 
         if char_id == player.get('selected_character_id'):
             await ctx.send("You cannot sell your currently selected character. Use `!select` to change it first."); return
-        if char_id in player.get('team', {}).values():
+        team_char_ids = [char_id for char_id in player.get('team', {}).values() if char_id is not None]
+        if char_id in team_char_ids:
             await ctx.send("You cannot sell a character that is on your team. Use `!team remove` first."); return
 
         character_to_sell = player['characters'][char_id]
@@ -352,8 +353,8 @@ class CharacterManagement(commands.Cog, name="Player Commands"):
             await ctx.send("Your collection is empty!"); return
         
         embed = discord.Embed(title=f"{ctx.author.display_name}'s Collection", color=discord.Color.purple())
-        team_char_ids = player.get('team', {}).values()
-        desc = "".join([f"`{cid}`: **Lvl {c['level']} {c['name']}** ({c['iv']}% IV) {'🛡️' if cid in team_char_ids else ''}{'⭐' if cid == player['selected_character_id'] else ''}\n" for cid, c in player['characters'].items()])
+        team_char_ids = [char_id for char_id in player.get('team', {}).values() if char_id is not None]
+        desc = "".join([f"`{cid}`: **Lvl {c['level']} {c['name']}** ({c['iv']}% IV) {'🛡️' if cid in team_char_ids else ''}{'⭐' if cid == player.get('selected_character_id') else ''}\n" for cid, c in player['characters'].items()])
         embed.description = desc
         await ctx.send(embed=embed)
 
@@ -476,6 +477,9 @@ class CharacterManagement(commands.Cog, name="Player Commands"):
         char_id = await self._find_character_from_input(ctx, player, identifier)
         if char_id is None: return
         
+        # Ensure char_id is integer for consistency
+        char_id = int(char_id)
+        
         if char_id in team_slots.values():
             await ctx.send("This character is already on your team in another slot."); return
 
@@ -516,6 +520,9 @@ class CharacterManagement(commands.Cog, name="Player Commands"):
 
         char_id_to_add = await self._find_character_from_input(ctx, player, identifier)
         if char_id_to_add is None: return
+        
+        # Ensure char_id is integer for consistency
+        char_id_to_add = int(char_id_to_add)
 
         # Check if the character is already in another slot
         current_slot_of_char = None

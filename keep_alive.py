@@ -28,11 +28,12 @@ class KeepAlive:
         """Ping the web server to keep it alive"""
         if not self.url:
             # Try to get the URL from environment or construct it
-            repl_slug = os.environ.get('REPL_SLUG', '')
+            repl_id = os.environ.get('REPL_ID', '')
             repl_owner = os.environ.get('REPL_OWNER', '')
             
-            if repl_slug and repl_owner:
-                self.url = f"https://{repl_slug}.{repl_owner}.repl.co/ping"
+            if repl_id and repl_owner:
+                # Use the current replit dev URL format
+                self.url = f"https://{repl_id}-00-35iv8qqisnpfi.spock.replit.dev/ping"
             else:
                 self.url = "http://127.0.0.1:5000/ping"
         

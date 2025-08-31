@@ -269,11 +269,13 @@ class CZ(commands.Cog, name="Core Gameplay"):
         try:
             def prep_team(player_data):
                 team = []
-                for char_id in player_data.get('team', []):
-                    inst = player_data['characters'][char_id].copy()
-                    inst['stats'] = stats_cog.get_character_display_stats(inst)
-                    inst['current_hp'] = inst['stats']['HP']
-                    team.append(inst)
+                team_slots = player_data.get('team', {})
+                for slot, char_id in team_slots.items():
+                    if char_id and char_id in player_data['characters']:
+                        inst = player_data['characters'][char_id].copy()
+                        inst['stats'] = stats_cog.get_character_display_stats(inst)
+                        inst['current_hp'] = inst['stats']['HP']
+                        team.append(inst)
                 return team
 
             team1, team2 = prep_team(p1_data), prep_team(p2_data)
