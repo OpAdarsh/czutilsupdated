@@ -630,6 +630,7 @@ class CharacterManagement(commands.Cog, name="Player Commands"):
         
         embed.add_field(name="⚔️ Active Moveset (4 Slots)", value="\n".join(moveset_display), inline=False)
 
+        active_moves_names = [move for move in active_moves if move is not None]
         unlocked_and_inactive = [f"**{m['name']}** - Power: {m.get('power', 0)}, Acc: {m.get('accuracy', 100)}%"
                                 for m in all_special_moves
                                 if m['unlock_level'] <= character['level'] and m['name'] not in active_moves_names]
@@ -687,19 +688,31 @@ class CharacterManagement(commands.Cog, name="Player Commands"):
         db.update_player(ctx.author.id, player)
         await ctx.send(f"Swapped **{old_move_name}** for **{new_move_data['name']}** on {character['name']}!")
 
-    @commands.command(name='learn', help="!learn <id_or_name>, <move_name> - Teaches a move to a character.", category="Team Management")
+    @commands.command(name='learn', help="!learn <move_name> OR !learn <id_or_name>, <move_name> - Teaches a move to a character.", category="Team Management")
     @has_accepted_rules()
     async def learn_move(self, ctx, *, arguments: str):
-        try:
-            identifier, move_name = [arg.strip() for arg in arguments.split(',', 1)]
-        except ValueError:
-            await ctx.send("Invalid format. Use: `!learn <character>, <move_name>`")
-            return
-
         player = db.get_player(ctx.author.id)
-        char_id = await self._find_character_from_input(ctx, player, identifier)
-        if char_id is None:
-            return
+        
+        # Check if arguments contain a comma (old format)
+        if ',' in arguments:
+            try:
+                identifier, move_name = [arg.strip() for arg in arguments.split(',', 1)]
+                char_id = await self._find_character_from_input(ctx, player, identifier)
+                if char_id is None:
+                    return
+            except ValueError:
+                await ctx.send("Invalid format. Use: `!learn <move_name>` or `!learn <character>, <move_name>`")
+                return
+        else:
+            # New simplified format - use selected character
+            move_name = arguments.strip()
+            char_id = player.get('selected_character_id')
+            if not char_id:
+                await ctx.send("❌ No character selected! Use `!select <character>` first, or use `!learn <character>, <move_name>`")
+                return
+            if char_id not in player['characters']:
+                await ctx.send("❌ Your selected character no longer exists! Please select a new one.")
+                return
 
         character = player['characters'][char_id]
         
